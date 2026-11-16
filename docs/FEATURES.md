@@ -19,26 +19,32 @@ Status: `[ ]` planned · `[~]` in progress · `[x]` done · `[-]` dropped (say w
 - [ ] Sketch entities: line, arc, circle, rectangle, polygon, ellipse, slot, spline, point
 - [ ] Constraints: coincident, horizontal, vertical, parallel, perpendicular, tangent, equal,
       concentric, midpoint, symmetric, fix; dimensions: distance, angle, radius/diameter
-- [ ] Named parameters and equations; driven/reference dimensions
+- [~] Named parameters and equations — named params + safe expression evaluator done (2026-11-15); driven/reference dimensions pending
 - [ ] Work planes, axes, points; sketch on face
-- [ ] Extrude (blind, symmetric, through-all, up-to), cut variants
+- [~] Extrude — blind, symmetric, new/add/cut done (2026-11-15); through-all and up-to pending
 - [ ] Revolve, sweep, loft, coil/spring
-- [ ] Fillet, chamfer, shell, draft, offset face
+- [~] Fillet, chamfer, shell done (2026-11-15); draft and offset face pending
 - [ ] Hole wizard (simple, counterbore, countersink, tapped), cosmetic threads
 - [ ] Rib, web, emboss/deboss
 - [ ] Patterns (rectangular, circular, path), mirror
-- [ ] Boolean combine/cut/intersect, split, thicken
-- [ ] Feature history/timeline with edit-and-rebuild, suppress, reorder
+- [~] Boolean union/cut/intersect done (2026-11-15); split and thicken pending
+- [~] Feature timeline with rebuild, suppress, remove done (2026-11-15); reorder and edit-in-place pending
 - [ ] Materials library with density, modulus, yield, Poisson, CTE, cost/kg
+
+- [ ] Script sandbox hardening: worker thread + Node permission model (node:vm is not a security boundary) — added 2026-11-15
+- [ ] Richer selectors: curve type, face normals, "outer corner edges", named/saved selections (hole seam edges currently count as vertical edges) — added 2026-11-15
+- [ ] WASM memory management: explicitly free intermediate shapes in long sessions — added 2026-11-15
+- [ ] More primitives in the timeline: cone, torus, ellipsoid, wedge, text — added 2026-11-15
+- [ ] Revolve, sweep, loft as timeline ops (kernel supports them; schema/engine don't yet) — added 2026-11-15
 
 ## P2 — Query and verify (the AI's eyes)
 
-- [ ] Mass properties: volume, area, mass, centre of mass, inertia tensor
-- [ ] Bounding box, distance between entities, angle between faces
+- [~] Mass properties — volume, area, centre of mass done (2026-11-15); mass (needs materials) and inertia tensor pending
+- [~] Bounding box done (2026-11-15); distance between entities and angle between faces pending
 - [ ] Section views and cut-plane renders
 - [ ] Interference / clearance check between bodies
 - [ ] Wall-thickness and minimum-feature analysis
-- [ ] Selection by description with count assertions (`expect`)
+- [~] Selection by description with `expect` — edges (all/direction/plane/length/box), faces (plane/parallelTo) done (2026-11-15); richer selectors pending
 - [ ] Render snapshots (PNG) with scale, section, and colour-by-property
 - [ ] Topology report (faces/edges/loops) as structured data
 
@@ -89,8 +95,8 @@ Status: `[ ]` planned · `[~]` in progress · `[x]` done · `[-]` dropped (say w
 
 ## P7 — Interchange
 
-- [ ] STEP import/export
-- [ ] STL, 3MF, OBJ, glTF export
+- [~] STEP export done (2026-11-15); import pending
+- [~] STL export done (2026-11-15); 3MF, OBJ, glTF pending
 - [ ] DXF/SVG export
 - [ ] URDF export
 - [ ] IGES — stretch
@@ -113,8 +119,8 @@ Status: `[ ]` planned · `[~]` in progress · `[x]` done · `[-]` dropped (say w
 
 ## P11 — Sandbox / visualize anything (added 2026-11-15)
 
-- [ ] Feature-timeline JSON schema as the single source of truth (tool calls append; scripts compile to it)
-- [ ] Script mode: `run_script` compiles a sandboxed script into timeline steps
+- [x] Feature-timeline JSON schema as the single source of truth (tool calls append; scripts compile to it) — 2026-11-15
+- [x] Script mode: scripts compile into the same timeline as tool calls (golden-tested identical) — 2026-11-15; `run_script` MCP tool lands with M2
 - [ ] Scene: objects with transforms, groups, ground/environment, lights, cameras
 - [ ] Approximate geometry layer (mesh/implicit; e.g. manifold-3d) clearly tagged "approximate"
 - [ ] Primitive and free-form shape library (spheres, capsules, lathe, noise/organic, text)

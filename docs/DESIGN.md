@@ -2,15 +2,15 @@
 
 > **Where we left off** (update this at every stop)
 > - **Date:** 2026-11-15
-> - **Phase:** M0 foundations done (TS + lint + CI + proven kernel). Starting **M1 model core**.
-> - **Last thing done:** kernel smoke test passes (8/8): replicad + OpenCASCADE run headless in Node;
->   exact analytic volumes for extrude/cylinder/cut/fillet; shell; STEP export valid; init ~130 ms;
->   extrude+fillet rebuild ~10 ms. `packages/core/src/kernel.js` isolates kernel stdout (MCP-safe).
+> - **Phase:** M0 and **M1 (model core) done**. Starting **M2: MCP server + live viewer**.
+> - **Last thing done:** M1 model core: timeline JSON + tool-call builder + script mode + rebuild engine +
+>   measure + STEP/STL/viewer-mesh export; 39 tests pass (closed-form answers + a golden test that scripts and
+>   tool calls give identical models). Kernel: init ~130 ms, rebuild ~10 ms; stdout isolated (MCP-safe).
 > - **Decided 2026-11-15 (owner):** the AI describes models **both ways** — step-by-step tool calls
 >   _and_ scripts — with a saved, diffable **feature timeline (JSON) as the single source of truth**.
 >   Scripts compile into the timeline; tool calls append to it. Owner's vision: a **sandbox** where the
 >   AI can help visualize _almost anything_, not only mechanical parts (see "Sandbox" below).
-> - **Next up:** (1) [done]; (2) the timeline/document model in `core`
+> - **Next up (M2):** (1) [done]; (2) [done] timeline/document model in `core`
 >   (JSON schema, rebuild engine, parameters); (3) MCP server skeleton exposing
 >   create-sketch / extrude / fillet / measure / export_step plus `run_script`; (4) minimal live viewer.
 > - **Roadmap:** see [ROADMAP.md](ROADMAP.md) (milestones M0–M12, Ideas Review process). Owner wants

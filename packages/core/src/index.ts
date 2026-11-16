@@ -1,1 +1,27 @@
+export { ModelBuilder, STEP_OPS } from './builder.ts';
+export {
+  type BuildReport,
+  buildModel,
+  type Model,
+  resolveParams,
+  type StepReport,
+} from './engine.ts';
+export { exportStep, exportStl, meshBodies, type ViewerMesh } from './export.ts';
+export { evalExpr, exprNames, type Num } from './expr.ts';
 export { initKernel, kernelDiagnostics } from './kernel.ts';
+export { type BodyInfo, describeBody } from './measure.ts';
+export { compileScript, type ScriptOptions } from './script.ts';
+export { as3D } from './shapes.ts';
+export {
+  type EdgeSelector,
+  emptyTimeline,
+  type FaceSelector,
+  formatZodError,
+  type ProfileItem,
+  type Step,
+  StepInput,
+  type StepOp,
+  TIMELINE_VERSION,
+  type Timeline,
+  TimelineSchema,
+} from './timeline.ts';

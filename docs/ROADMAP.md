@@ -5,7 +5,7 @@ the owner sets direction and approves big bets. Updated whenever scope, order, o
 never left to rot. Detail per feature lives in [FEATURES.md](FEATURES.md); the "why" lives in
 [DESIGN.md](DESIGN.md); what changed lives in [EDITLOG.md](EDITLOG.md).
 
-_Last updated: 2026-11-15 · Current milestone: **M1**_
+_Last updated: 2026-11-15 · Current milestone: **M2**_
 
 ## How this roadmap stays alive
 
@@ -46,18 +46,18 @@ Status: ☐ not started · ◐ in progress · ☑ done. "Done when" = exit crite
 ### M0 — Foundations ☑
 
 Repo, docs, logging, kernel proof. **Done when:** TypeScript + lint + CI green on every push; kernel
-smoke test runs in CI.
+smoke test runs in CI. _(met)_
 
 - ☑ Public repo, docs, edit-log hook, kernel proven (8/8), stdout isolation
 - ☑ TypeScript, lint, CI (workflow added; first run verified on GitHub)
 
-### M1 — Model core ☐ → Next
+### M1 — Model core ☑
 
 The feature-timeline JSON (single source of truth), rebuild engine, parameters, tool-call API and
 script compiler. **Done when:** a script and an equivalent sequence of tool calls produce an identical
 timeline and identical geometry (golden tests); editing a parameter rebuilds correctly.
 
-### M2 — MCP server + live viewer ☐
+### M2 — MCP server + live viewer ◐ (starting)
 
 stdio + HTTP MCP server; browser viewer on localhost showing the AI's work live. **Done when:** from a
 clean clone, one command starts it, Claude Desktop/Claude Code connect, and "make a bracket with four
@@ -125,8 +125,8 @@ goes from README to first modeled part in under five minutes.
 
 ## Now / Next / Later
 
-- **Now:** M1 — timeline schema + rebuild engine.
-- **Next:** M2 — MCP + viewer (earliest "wow").
+- **Now:** M2 — MCP server + live viewer (the first "wow").
+- **Next:** M3 — sketch constraints and part depth (revolve/sweep/loft, holes, patterns); M4 — query and verify.
 - **Later:** M3 onward in order; Proof Loop (M5) deliberately lands before assemblies because it is
   what makes the project different.
 

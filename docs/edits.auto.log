@@ -48,3 +48,24 @@
 2026-11-16T02:20:26Z	Edit	docs/ROADMAP.md
 2026-11-16T02:20:26Z	Edit	docs/EDITLOG.md
 2026-11-16T02:20:26Z	Edit	docs/DESIGN.md
+# logged by hand (hook not active in this session): M1 model core
+2026-11-16T02:26:56Z	Write	packages/core/src/expr.ts
+2026-11-16T02:26:56Z	Write	packages/core/src/timeline.ts
+2026-11-16T02:26:57Z	Write	packages/core/src/engine.ts
+2026-11-16T02:26:57Z	Write	packages/core/src/measure.ts
+2026-11-16T02:26:57Z	Write	packages/core/src/builder.ts
+2026-11-16T02:26:57Z	Write	packages/core/src/script.ts
+2026-11-16T02:26:57Z	Write	packages/core/src/export.ts
+2026-11-16T02:26:57Z	Edit	packages/core/src/index.ts
+2026-11-16T02:26:57Z	Edit	packages/core/src/engine.ts
+2026-11-16T02:26:57Z	Edit	packages/core/src/timeline.ts
+2026-11-16T02:26:57Z	Write	packages/core/test/expr.test.ts
+2026-11-16T02:26:58Z	Write	packages/core/test/model.test.ts
+2026-11-16T02:26:58Z	Write	packages/core/test/export.test.ts
+2026-11-16T02:26:58Z	Edit	packages/core/test/model.test.ts
+2026-11-16T02:26:58Z	Edit	packages/core/package.json
+2026-11-16T02:26:58Z	Edit	package-lock.json
+2026-11-16T02:26:58Z	Edit	docs/FEATURES.md
+2026-11-16T02:26:58Z	Edit	docs/ROADMAP.md
+2026-11-16T02:26:58Z	Edit	docs/EDITLOG.md
+2026-11-16T02:26:58Z	Edit	docs/DESIGN.md
