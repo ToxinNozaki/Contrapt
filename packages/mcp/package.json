@@ -1,0 +1,22 @@
+{
+  "name": "@contrapt/mcp",
+  "version": "0.0.0",
+  "description": "Contrapt MCP server and live viewer host.",
+  "license": "MIT",
+  "type": "module",
+  "main": "src/index.ts",
+  "bin": {
+    "contrapt-mcp": "src/cli.ts"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.ts",
+    "typecheck": "tsc -p . --noEmit",
+    "demo": "node src/demo.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "three": "^0.187.0",
+    "zod": "^4.6.7",
+    "@contrapt/core": "0.0.0"
+  }
+}

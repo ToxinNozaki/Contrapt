@@ -2,11 +2,34 @@
 
 **Open-source, AI-drivable CAD and simulator that proves a design works before you build it.**
 
-> Status: early development — foundations only. Follow progress in [docs/FEATURES.md](docs/FEATURES.md).
+> **Status: early (pre-release).** You can already drive Contrapt from an AI and watch the part appear live.
+> Progress: [docs/ROADMAP.md](docs/ROADMAP.md) · [docs/FEATURES.md](docs/FEATURES.md)
+
+## Quick start
+
+Needs Node.js 22.18+.
+
+```bash
+git clone https://github.com/ToxinNozaki/Contrapt.git
+cd Contrapt && npm install
+npm run demo -w @contrapt/mcp     # sample bracket in the live viewer
+```
+
+Then connect your AI (Claude Code, Claude Desktop, LM Studio…) — step-by-step in [docs/SETUP.md](docs/SETUP.md).
+For Claude Code it is one line:
+
+```bash
+claude mcp add contrapt -- node /path/to/Contrapt/packages/mcp/src/cli.ts
+```
+
+**What works today:** parametric parts (box, cylinder, sphere, sketch + extrude, fillet, chamfer, shell,
+booleans, transforms) with named parameters and expressions; build either by tool calls or by script; a
+per-step build report with measured volume, size and centre of mass after every change; STEP and STL
+export; save/load; a live 3D viewer with dimension callouts.
 
 Contrapt is a lightweight parametric 3D CAD app with a built-in
-[Model Context Protocol](https://modelcontextprotocol.io) server, so an AI assistant (Claude, ChatGPT,
-or a local model) can model, measure, simulate, and export a part or assembly — while you watch live in a
+[Model Context Protocol](https://modelcontextprotocol.io) server, so an AI assistant (Claude, a local
+model, and more) can model, measure, and export parts — with simulation and assemblies on the roadmap — while you watch live in a
 browser viewer. It is an open-source alternative to tools like Autodesk Inventor, built for inventing.
 
 ## The idea: the Proof Loop

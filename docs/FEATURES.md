@@ -103,19 +103,19 @@ Status: `[ ]` planned · `[~]` in progress · `[x]` done · `[-]` dropped (say w
 
 ## P8 — Viewer
 
-- [ ] Browser viewer (three.js) served on localhost, live-updating as the AI works
-- [ ] Orbit/pan/zoom, section, explode, wireframe, measure
-- [ ] Feature tree and timeline panel
+- [x] Browser viewer (three.js) served on localhost, live-updating as the AI works (SSE; render-on-demand; read-only, Host-checked) — 2026-11-15
+- [~] Orbit/pan/zoom, wireframe, edges toggle, fit, live dimension callouts done (2026-11-15); section, explode, interactive measure pending
+- [~] Build-report rail (steps with status glyphs, parameters, measured values) done, read-only (2026-11-15); interactive tree/timeline editing pending
 - [ ] Simulation playback and result plots
 - [ ] Manual modeling UI (so a human can sketch and edit too)
 
 ## P9 — MCP and AI integration
 
-- [ ] MCP server (stdio + streamable HTTP) exposing all layers
-- [ ] MCP resources (model state, docs, material/parts library) and prompts
+- [~] MCP server — stdio done with 13 tools (2026-11-15), tested in-memory and over a real stdio subprocess; streamable HTTP pending
+- [~] MCP docs resource (contrapt://docs) done (2026-11-15); model-state resource, materials/parts library, and prompts pending
 - [ ] Agent skill / system-prompt pack for Claude, ChatGPT, and local models
 - [ ] OpenAI-style function-calling adapter and REST endpoint
-- [ ] Setup guides per client (Claude Desktop, Claude Code, ChatGPT, LM Studio/Ollama)
+- [~] docs/SETUP.md written for Claude Code, Claude Desktop, LM Studio/local (2026-11-15) — NOT yet verified inside the real apps; ChatGPT needs the HTTP transport
 
 ## P11 — Sandbox / visualize anything (added 2026-11-15)
 
@@ -130,9 +130,16 @@ Status: `[ ]` planned · `[~]` in progress · `[x]` done · `[-]` dropped (say w
 - [ ] Keyframe animation and simulation playback; GIF/PNG/MP4 snapshot export
 - [ ] Scene presets (workshop, studio, outdoors)
 
+- [ ] Verify the stdio server inside real Claude Desktop, Claude Code and LM Studio and record results — added 2026-11-15
+- [ ] Streamable HTTP MCP transport (needed for ChatGPT and other remote-only clients) — added 2026-11-15
+- [ ] Publishable build: compile TS to dist so `npx contrapt` works (Node refuses to run .ts inside node_modules) — added 2026-11-15
+- [ ] Per-op convenience tools (add_box, add_fillet, ...) if weaker/local models struggle with the generic add_step — added 2026-11-15
+- [ ] Viewer: click a body to highlight its step, hover to read dimensions, section plane, themes toggle — added 2026-11-15
+- [ ] Live human edits in the viewer (change a parameter by dragging/typing) feeding back to the timeline — added 2026-11-15
+
 ## P10 — Release
 
-- [ ] README with GIF/screenshots and 60-second quick start
+- [~] README quick start written (2026-11-15); GIF/screenshots pending
 - [ ] GitHub topics, description, social preview image
 - [ ] Examples gallery (bracket, gearbox, linkage, enclosure, robot arm)
 - [ ] CI (build, test, validation suite), npm publish, docs site

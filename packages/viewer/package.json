@@ -1,0 +1,7 @@
+{
+  "name": "@contrapt/viewer",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Static browser viewer for Contrapt (served by @contrapt/mcp; three.js comes from node_modules).",
+  "license": "MIT"
+}

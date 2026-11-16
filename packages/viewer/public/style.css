@@ -1,0 +1,348 @@
+:root {
+  --ground-top: #f1f4f8;
+  --ground-bottom: #d9dfe7;
+  --panel: #f8f9fb;
+  --ink: #17202b;
+  --muted: #5a6675;
+  --rule: #d5dae1;
+  --accent: #1f4fe0;
+  --ok: #1e8e5a;
+  --err: #c8362d;
+  --skip: #8a94a1;
+  --grid: #b8c0cb;
+  --rail-w: 20rem;
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground-top: #1b2128;
+    --ground-bottom: #0f1317;
+    --panel: #171c22;
+    --ink: #e6ebf1;
+    --muted: #93a0ae;
+    --rule: #29313a;
+    --accent: #7b97ff;
+    --ok: #4cc38a;
+    --err: #ff7a70;
+    --skip: #66717d;
+    --grid: #2d3640;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: var(--ground-bottom);
+  color: var(--ink);
+  font:
+    14px / 1.45 system-ui,
+    "Segoe UI Variable",
+    "Segoe UI",
+    Roboto,
+    sans-serif;
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+}
+
+#stage {
+  position: fixed;
+  inset: 0 0 0 var(--rail-w);
+  background: linear-gradient(180deg, var(--ground-top), var(--ground-bottom));
+  transition: left 0.18s ease;
+}
+body.rail-hidden #stage {
+  left: 0;
+}
+
+#gl {
+  width: 100%;
+  height: 100%;
+  display: block;
+  outline: none;
+}
+#gl:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+
+#dims {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.dim {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--panel) 88%, transparent);
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  box-shadow: 0 0 0 1px var(--rule);
+}
+
+#empty {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  max-width: 24rem;
+  margin: 0;
+  text-align: center;
+  color: var(--muted);
+  font-size: 15px;
+}
+
+/* ---------- build report rail ---------- */
+#rail {
+  position: fixed;
+  inset: 0 auto 0 0;
+  width: var(--rail-w);
+  padding: 1rem 1.1rem 4.5rem;
+  overflow-y: auto;
+  background: var(--panel);
+  border-right: 1px solid var(--rule);
+  transition: transform 0.18s ease;
+}
+body.rail-hidden #rail {
+  transform: translateX(-100%);
+}
+
+#rail header {
+  margin-bottom: 1.1rem;
+}
+h1 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 650;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+h2 {
+  margin: 1.3rem 0 0.5rem;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.live {
+  margin: 0.15rem 0 0;
+  font-size: 12px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.live::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--skip);
+}
+.live.on::before {
+  background: var(--ok);
+}
+.live.off::before {
+  background: var(--err);
+}
+
+/* the vertical rail of steps */
+#steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  position: relative;
+}
+#steps::before {
+  content: "";
+  position: absolute;
+  left: 7px;
+  top: 8px;
+  bottom: 8px;
+  width: 1px;
+  background: var(--rule);
+}
+.step {
+  position: relative;
+  padding: 0.3rem 0 0.3rem 1.7rem;
+}
+.step .glyph {
+  position: absolute;
+  left: 0;
+  top: 0.5rem;
+  width: 15px;
+  height: 15px;
+  background: var(--panel);
+}
+.step .glyph svg {
+  display: block;
+  width: 15px;
+  height: 15px;
+}
+.step .name {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.step .op {
+  color: var(--muted);
+  font-size: 12px;
+  margin-left: 0.4rem;
+  font-weight: 400;
+}
+.step .msg {
+  margin: 0.15rem 0 0;
+  font-size: 12.5px;
+  color: var(--err);
+  overflow-wrap: anywhere;
+}
+.step.skipped .name,
+.step.suppressed .name {
+  color: var(--muted);
+  font-weight: 500;
+}
+.step.skipped,
+.step.suppressed {
+  opacity: 0.8;
+}
+
+#params {
+  margin: 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.2rem 0.9rem;
+}
+#params dt {
+  color: var(--muted);
+}
+#params dd {
+  margin: 0;
+  text-align: right;
+  font-weight: 600;
+}
+
+.body {
+  padding: 0.55rem 0;
+  border-top: 1px solid var(--rule);
+}
+.body:first-child {
+  border-top: 0;
+}
+.body .bn {
+  font-weight: 650;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  flex: none;
+}
+.body table {
+  width: 100%;
+  margin-top: 0.3rem;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+.body th {
+  text-align: left;
+  font-weight: 400;
+  color: var(--muted);
+  padding: 1px 0;
+}
+.body td {
+  text-align: right;
+  padding: 1px 0;
+  font-weight: 600;
+}
+
+/* ---------- toolbar ---------- */
+#tools {
+  position: fixed;
+  bottom: 0.9rem;
+  left: calc(var(--rail-w) + (100vw - var(--rail-w)) / 2);
+  transform: translateX(-50%);
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 9px;
+  background: var(--panel);
+  box-shadow:
+    0 0 0 1px var(--rule),
+    0 6px 18px -8px rgba(10, 20, 35, 0.35);
+  z-index: 2;
+  transition: left 0.18s ease;
+}
+body.rail-hidden #tools {
+  left: 50%;
+}
+
+#tools button {
+  font: inherit;
+  font-size: 13px;
+  color: var(--ink);
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  padding: 0.35rem 0.7rem;
+  cursor: pointer;
+}
+#tools button:hover {
+  background: color-mix(in srgb, var(--ink) 8%, transparent);
+}
+#tools button[aria-pressed="true"] {
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  color: var(--accent);
+  font-weight: 600;
+}
+#tools button:focus-visible,
+#gl:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+@media (max-width: 760px) {
+  :root {
+    --rail-w: 100vw;
+  }
+  #rail {
+    max-height: 46vh;
+    top: auto;
+    bottom: 0;
+    width: 100%;
+    border-right: 0;
+    border-top: 1px solid var(--rule);
+  }
+  body:not(.rail-hidden) #stage {
+    inset: 0 0 46vh 0;
+  }
+  body #tools {
+    left: 50%;
+    bottom: calc(46vh + 0.6rem);
+  }
+  body.rail-hidden #tools {
+    bottom: 0.9rem;
+  }
+  body.rail-hidden #rail {
+    transform: translateY(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #stage,
+  #rail,
+  #tools {
+    transition: none;
+  }
+}

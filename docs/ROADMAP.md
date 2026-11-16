@@ -57,11 +57,12 @@ The feature-timeline JSON (single source of truth), rebuild engine, parameters, 
 script compiler. **Done when:** a script and an equivalent sequence of tool calls produce an identical
 timeline and identical geometry (golden tests); editing a parameter rebuilds correctly.
 
-### M2 — MCP server + live viewer ◐ (starting)
+### M2 — MCP server + live viewer ◐ (about 85%)
 
 stdio + HTTP MCP server; browser viewer on localhost showing the AI's work live. **Done when:** from a
 clean clone, one command starts it, Claude Desktop/Claude Code connect, and "make a bracket with four
 mounting holes" appears in the viewer and exports to STEP. Includes first setup guides.
+_Status:_ server (13 tools), live viewer, and SETUP.md are built and tested (16 MCP tests, incl. a real stdio subprocess). **Remaining:** verify inside real Claude Desktop/Code/LM Studio; publishable `npx` build.
 
 ### M3 — Sketch and part depth ☐
 

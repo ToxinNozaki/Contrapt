@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Contrapt viewer</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231f4fe0'/%3E%3Cpath d='M9 21V11l7-4 7 4v10l-7 4z' fill='none' stroke='white' stroke-width='2' stroke-linejoin='round'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/style.css">
+  <script type="importmap">
+    { "imports": { "three": "/vendor/three/build/three.module.js", "three/addons/": "/vendor/three/examples/jsm/" } }
+  </script>
+</head>
+<body>
+  <main id="stage" aria-label="3D model view">
+    <canvas id="gl" tabindex="0" aria-label="3D viewport. Drag to orbit, scroll to zoom, right-drag to pan."></canvas>
+    <div id="dims" aria-hidden="true"></div>
+    <p id="empty" hidden>No bodies yet. Ask your AI to add a box or run a script.</p>
+  </main>
+
+  <aside id="rail" aria-label="Build report">
+    <header>
+      <h1 id="model-name">Untitled</h1>
+      <p id="live" class="live" role="status">Connecting…</p>
+    </header>
+    <section aria-labelledby="steps-h">
+      <h2 id="steps-h">Build</h2>
+      <ol id="steps"></ol>
+    </section>
+    <section aria-labelledby="params-h" id="params-section" hidden>
+      <h2 id="params-h">Parameters</h2>
+      <dl id="params"></dl>
+    </section>
+    <section aria-labelledby="bodies-h" id="bodies-section" hidden>
+      <h2 id="bodies-h">Measured</h2>
+      <div id="bodies"></div>
+    </section>
+  </aside>
+
+  <nav id="tools" aria-label="View options">
+    <button id="t-rail" type="button" aria-pressed="true" title="Show or hide the build report">Report</button>
+    <button id="t-fit" type="button" title="Fit the model in view (double-click the viewport)">Fit</button>
+    <button id="t-edges" type="button" aria-pressed="true">Edges</button>
+    <button id="t-dims" type="button" aria-pressed="true">Sizes</button>
+    <button id="t-wire" type="button" aria-pressed="false">Wireframe</button>
+  </nav>
+
+  <script type="module" src="/main.js"></script>
+</body>
+</html>

@@ -16,3 +16,4 @@ Thumbs.db
 # Generated outputs
 out/
 *.step.tmp
+.claude/launch.json
