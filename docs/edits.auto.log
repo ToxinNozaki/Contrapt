@@ -1,0 +1,16 @@
+# backfill: files written before the hook was active (session 1)
+2026-11-16T02:10:44Z	Write	CLAUDE.md
+2026-11-16T02:10:44Z	Write	docs/DESIGN.md
+2026-11-16T02:10:44Z	Write	docs/FEATURES.md
+2026-11-16T02:10:44Z	Write	docs/EDITLOG.md
+2026-11-16T02:10:44Z	Write	tools/dev/log-edit.mjs
+2026-11-16T02:10:44Z	Write	tools/dev/settings.local.example.json
+2026-11-16T02:10:44Z	Write	.gitignore
+2026-11-16T02:10:44Z	Edit	tools/dev/log-edit.mjs
+# logged by hand (hook not active in the session that created these)
+2026-11-16T02:11:24Z	Write	LICENSE
+2026-11-16T02:11:24Z	Write	NOTICE.md
+2026-11-16T02:11:24Z	Write	README.md
+2026-11-16T02:11:24Z	Edit	docs/EDITLOG.md
+2026-11-16T02:11:24Z	Edit	docs/FEATURES.md
+2026-11-16T02:11:24Z	Write	.gitattributes
