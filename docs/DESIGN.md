@@ -6,9 +6,13 @@
 > - **Last thing done:** kernel smoke test passes (8/8): replicad + OpenCASCADE run headless in Node;
 >   exact analytic volumes for extrude/cylinder/cut/fillet; shell; STEP export valid; init ~130 ms;
 >   extrude+fillet rebuild ~10 ms. `packages/core/src/kernel.js` isolates kernel stdout (MCP-safe).
-> - **Next up:** (1) TypeScript + lint + CI scaffold; (2) the document model: a text-based, diffable
->   part description + parameters + feature timeline in `core`; (3) MCP server skeleton exposing
->   create-sketch / extrude / fillet / measure / export_step; (4) minimal viewer.
+> - **Decided 2026-11-15 (owner):** the AI describes models **both ways** — step-by-step tool calls
+>   *and* scripts — with a saved, diffable **feature timeline (JSON) as the single source of truth**.
+>   Scripts compile into the timeline; tool calls append to it. Owner's vision: a **sandbox** where the
+>   AI can help visualize *almost anything*, not only mechanical parts (see "Sandbox" below).
+> - **Next up:** (1) TypeScript + lint + CI scaffold; (2) the timeline/document model in `core`
+>   (JSON schema, rebuild engine, parameters); (3) MCP server skeleton exposing
+>   create-sketch / extrude / fillet / measure / export_step plus `run_script`; (4) minimal live viewer.
 > - **Open decisions:** none blocking. See "Open questions" at the bottom.
 
 ## What this is
@@ -49,6 +53,23 @@ Everyone else's AI-CAD is "AI draws a shape." Contrapt's claim is **"the AI prov
 
 Later invention extras: mechanism synthesis ("this point should trace this path" → linkage),
 rule-driven configuration (an iLogic-style rules layer), generative variants.
+
+## The Sandbox (owner's vision, 2026-11-15)
+
+Contrapt should be a shared workbench where the AI can help the owner **visualize almost anything**:
+a gearbox, a room layout, a concept vehicle, a marble run, a robot, a stage set. Engineering-grade
+parts (exact B-rep, STEP, simulation) are the core, but the sandbox also needs:
+
+- **Scenes:** many objects with transforms, groups, a ground/environment, lights, and cameras.
+- **Free-form shapes:** organic and approximate geometry via a mesh/implicit layer
+  (candidate: `manifold-3d`, Apache-2.0) alongside exact B-rep; clearly labelled "approximate".
+- **Import/export** of meshes and CAD so things made elsewhere can join the scene.
+- **Look and annotate:** materials/colours, labels, dimensions, callouts, saved camera views, images/GIFs.
+- **Animate:** keyframes and simulation playback, so ideas can be shown moving.
+- **Scale and context:** place things next to a human figure, a table, a room, to judge size.
+
+Design consequence: the timeline holds both *precise parts* and *scene objects*; every object says
+whether its geometry is exact or approximate, and the simulator only trusts exact geometry.
 
 ## Goals / non-goals / anti-goals
 

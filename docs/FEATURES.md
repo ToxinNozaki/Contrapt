@@ -100,6 +100,18 @@ Status: `[ ]` planned · `[~]` in progress · `[x]` done · `[-]` dropped (say w
 - [ ] OpenAI-style function-calling adapter and REST endpoint
 - [ ] Setup guides per client (Claude Desktop, Claude Code, ChatGPT, LM Studio/Ollama)
 
+## P11 — Sandbox / visualize anything (added 2026-11-15)
+- [ ] Feature-timeline JSON schema as the single source of truth (tool calls append; scripts compile to it)
+- [ ] Script mode: `run_script` compiles a sandboxed script into timeline steps
+- [ ] Scene: objects with transforms, groups, ground/environment, lights, cameras
+- [ ] Approximate geometry layer (mesh/implicit; e.g. manifold-3d) clearly tagged "approximate"
+- [ ] Primitive and free-form shape library (spheres, capsules, lathe, noise/organic, text)
+- [ ] Mesh import (STL/OBJ/glTF) and CAD import into scenes
+- [ ] Materials/colours, labels, dimension callouts, saved camera views
+- [ ] Reference objects for scale (human figure, table, door, room)
+- [ ] Keyframe animation and simulation playback; GIF/PNG/MP4 snapshot export
+- [ ] Scene presets (workshop, studio, outdoors)
+
 ## P10 — Release
 - [ ] README with GIF/screenshots and 60-second quick start
 - [ ] GitHub topics, description, social preview image

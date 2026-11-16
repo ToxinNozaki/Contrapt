@@ -40,5 +40,9 @@ so nothing is lost even if a bullet here is missed. Repo-relative paths only (th
   then wrote `packages/core/src/kernel.js` (`initKernel`, `kernelDiagnostics`) and pointed the test at it.
 - Confirmed the edit-log hook does not fire in the session that created the repo (it loads only for
   sessions started inside the repo); edits since the hook was written are logged by hand.
+- Owner decision recorded: models are described **both ways** (tool calls + scripts) over one saved
+  feature-timeline JSON. Owner's vision recorded: a **sandbox** to visualize almost anything. Added
+  "The Sandbox" section to DESIGN.md and a new P11 section to FEATURES.md (placed before P10 in the file;
+  numbering is by addition order, not execution order).
 - Privacy: the machine's global git email is a personal address, so this repo's *local* git config uses
   the GitHub noreply address; commits must never carry the personal one.
