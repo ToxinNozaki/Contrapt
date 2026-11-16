@@ -164,3 +164,13 @@
 2026-11-16T03:06:11Z	Edit	docs/SETUP.md
 2026-11-16T03:06:11Z	Edit	docs/EDITLOG.md
 2026-11-16T03:06:11Z	Edit	README.md
+2026-11-16T03:12:00Z	Write	packages/mcp/src/tools-convert.ts
+2026-11-16T03:12:00Z	Write	packages/mcp/src/all-tools.ts
+2026-11-16T03:12:00Z	Edit	packages/mcp/src/tools.ts
+2026-11-16T03:12:00Z	Edit	packages/mcp/src/cli.ts
+2026-11-16T03:12:00Z	Edit	packages/mcp/src/index.ts
+2026-11-16T03:12:00Z	Write	packages/mcp/test/convert.test.ts
+2026-11-16T03:12:01Z	Edit	packages/mcp/knowledge/importing-cad-files.md
+2026-11-16T03:12:01Z	Edit	docs/FEATURES.md
+2026-11-16T03:12:01Z	Edit	docs/SETUP.md
+2026-11-16T03:12:01Z	Edit	docs/EDITLOG.md

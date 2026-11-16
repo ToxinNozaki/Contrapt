@@ -51,6 +51,11 @@ published support envelope (specific container/schema versions; read-only; no fe
 intent only partly). Whether a given recent file falls inside that envelope is only known by trying it. Treat any
 such converter as optional and external: results must be checked with `measure` against known dimensions.
 
+If the user has enabled a converter, `convert_file {file}` writes `<name>.converted.step` next to the original; then
+`import_file` that. If `convert_file` says no converter is configured, or the conversion fails (common for the newest file
+versions), fall back to asking for a STEP export, or `recreate_from_reference`. Never present a converted body as exact
+until its size matches what the user knows.
+
 ## Other programs (all via STEP)
 SolidWorks (.sldprt/.sldasm), Fusion (.f3d), CATIA, NX/Creo (.prt), Rhino (.3dm), FreeCAD (.fcstd): export STEP.
 Meshes (STL, OBJ, 3MF, glTF, SketchUp, Blender) have no exact faces: they are approximate, and a mesh importer

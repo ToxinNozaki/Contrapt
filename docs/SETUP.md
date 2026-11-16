@@ -114,6 +114,14 @@ AI how to export STEP from Inventor (File > Export > CAD Format > STEP) for an e
 `recreate_from_reference` playbook rebuilds a part approximately from the preview plus a few measurements. Direct
 geometry reading is planned. Files are only read from that folder, by plain name.
 
+### Optional: convert native CAD files with an external converter
+
+If you install the open-source [cadmpeg](https://github.com/cadmpeg/cadmpeg) command-line converter yourself, start Contrapt
+with `--cadmpeg <path to cadmpeg>` (or set `CONTRAPT_CADMPEG`) and the AI can call `convert_file` on a file in the imports
+folder (Inventor `.ipt`/`.iam`, Fusion, SolidWorks, ...). It writes `<name>.converted.step`, which `import_file` then reads. Only
+you choose which program runs; the AI cannot pass options, and it only touches files in the imports folder. Support for
+newer file versions varies: always check the imported size with `measure`.
+
 ## 5. Tools at a glance
 
 | Tool | What it does |
@@ -127,6 +135,7 @@ geometry reading is planned. Files are only read from that folder, by plain name
 | `export_model` | STEP (exact CAD) or STL (3D printing) into the output folder |
 | `save_model`, `load_model`, `list_models` | Keep work between sessions |
 | `view` | The live viewer link |
+| `convert_file` | (optional) convert a native CAD file to STEP with a converter you enabled |
 | `inspect_file`, `import_file` | Identify a file from another CAD program; import a STEP as an exact body |
 | `get_playbook`, `list_knowledge`, `get_knowledge` | Expert prompts and engineering knowledge for any client |
 

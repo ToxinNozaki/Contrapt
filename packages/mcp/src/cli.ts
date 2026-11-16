@@ -31,6 +31,15 @@ if (!process.argv.includes('--no-viewer')) {
   process.on('exit', () => void viewer.close());
 }
 
-const server = createMcpServer({ session, outDir, viewerUrl: () => viewerUrl });
+// An external converter is opt-in and chosen by the user here, never by the AI.
+const cadmpeg = arg('--cadmpeg') ?? process.env.CONTRAPT_CADMPEG;
+if (cadmpeg) log(`converter enabled: ${cadmpeg}`);
+
+const server = createMcpServer({
+  session,
+  outDir,
+  viewerUrl: () => viewerUrl,
+  converters: cadmpeg ? { cadmpeg: { command: resolve(cadmpeg) } } : undefined,
+});
 await server.connect(new StdioServerTransport());
 log('MCP server ready on stdio');

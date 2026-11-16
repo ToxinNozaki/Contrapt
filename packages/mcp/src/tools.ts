@@ -12,6 +12,8 @@ export interface ToolContext {
   /** Directory for exports and saved models. Tools never accept paths, only plain names. */
   outDir: string;
   viewerUrl: () => string | undefined;
+  /** Optional external converters, chosen by the USER at startup (never by the AI). */
+  converters?: { cadmpeg?: { command: string; prefixArgs?: string[] } };
 }
 
 /** A tool result with images (base64) that capable AI clients can actually look at. */
