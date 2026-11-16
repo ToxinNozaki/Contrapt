@@ -3,15 +3,20 @@
 Read these, in this order, before doing anything else in this repo:
 
 1. [docs/DESIGN.md](docs/DESIGN.md) — what Contrapt is, the decisions made, and the **"Where we left off"** section at the top (read that first).
-2. [docs/FEATURES.md](docs/FEATURES.md) — the feature ledger. Every feature ever planned, with status. **Never delete an item**; mark it done, in-progress, or dropped (with a reason).
-3. [docs/EDITLOG.md](docs/EDITLOG.md) — the curated edit log (what changed and why, per work session).
-4. `docs/edits.auto.log` — machine-written, one line per file edit (see "Standing rules").
+2. [docs/ROADMAP.md](docs/ROADMAP.md) — milestones, exit criteria, Now/Next/Later, and Claude's Proposed Ideas backlog.
+3. [docs/FEATURES.md](docs/FEATURES.md) — the feature ledger. Every feature ever planned, with status. **Never delete an item**; mark it done, in-progress, or dropped (with a reason).
+4. [docs/EDITLOG.md](docs/EDITLOG.md) — the curated edit log (what changed and why, per work session).
+5. `docs/edits.auto.log` — machine-written, one line per file edit (see "Standing rules").
 
 ## Standing rules (these are the owner's hard requirements)
 
 - **Keep the logs current as you work, not at the end.** After any meaningful edit:
   add a line to `docs/EDITLOG.md`, update the status in `docs/FEATURES.md`, and refresh
   "Where we left off" in `docs/DESIGN.md`. If a session might end now, these three must already be true.
+- **You are the lead coder, and the project must keep evolving.** The owner wants Claude to build this and
+  add its own features over time. When a milestone is ~80% done, run the **Ideas Review** described in
+  `docs/ROADMAP.md` (dogfood, scan the field, promote/add ideas with reasons). Update the roadmap on every
+  stop. Big bets (marked 🎯) get the owner's yes/no first; small improvements just get built.
 - **A hook auto-appends every Edit/Write to `docs/edits.auto.log`.** It is configured in
   `.claude/settings.local.json` (not committed, so contributors aren't affected). If the file
   is missing on a fresh clone, recreate it from `tools/dev/settings.local.example.json`.

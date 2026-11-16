@@ -44,5 +44,10 @@ so nothing is lost even if a bullet here is missed. Repo-relative paths only (th
   feature-timeline JSON. Owner's vision recorded: a **sandbox** to visualize almost anything. Added
   "The Sandbox" section to DESIGN.md and a new P11 section to FEATURES.md (placed before P10 in the file;
   numbering is by addition order, not execution order).
+- Added `docs/ROADMAP.md` at the owner's request: milestones M0–M12 with exit criteria and version
+  targets, Now/Next/Later, a self-evolution process (Ideas Review at ~80% of a milestone), a Proposed
+  Ideas backlog (ContraptBench, sim-to-real calibration, tolerance analysis, teaching mode, topology
+  optimisation, etc.), and a risk table. Linked it from CLAUDE.md and recorded the "Claude is lead coder,
+  keep evolving" standing rule there.
 - Privacy: the machine's global git email is a personal address, so this repo's *local* git config uses
   the GitHub noreply address; commits must never carry the personal one.

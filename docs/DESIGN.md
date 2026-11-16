@@ -13,6 +13,8 @@
 > - **Next up:** (1) TypeScript + lint + CI scaffold; (2) the timeline/document model in `core`
 >   (JSON schema, rebuild engine, parameters); (3) MCP server skeleton exposing
 >   create-sketch / extrude / fillet / measure / export_step plus `run_script`; (4) minimal live viewer.
+> - **Roadmap:** see [ROADMAP.md](ROADMAP.md) (milestones M0–M12, Ideas Review process). Owner wants
+>   Claude as lead coder with the project continually evolving.
 > - **Open decisions:** none blocking. See "Open questions" at the bottom.
 
 ## What this is
