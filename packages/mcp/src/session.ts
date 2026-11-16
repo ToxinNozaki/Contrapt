@@ -1,9 +1,12 @@
 // A Session is the live design: one ModelBuilder (the timeline) plus its latest build.
 // Every mutation rebuilds immediately so the AI gets verified numbers back, and notifies listeners
 // (the browser viewer) so people can watch the model change as it is built.
+import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import {
   type BuildReport,
   buildModel,
+  isSafeFileName,
   type Model,
   ModelBuilder,
   meshBodies,
@@ -18,6 +21,11 @@ export interface Snapshot {
   timeline: ReturnType<ModelBuilder['toJSON']>;
 }
 
+export interface SessionOptions {
+  /** Folder holding files for `import` steps. Imports are unavailable when omitted. */
+  importsDir?: string;
+}
+
 export class Session {
   builder: ModelBuilder;
   model?: Model;
@@ -27,9 +35,22 @@ export class Session {
   /** Serialises rebuilds so rapid tool calls can't interleave. */
   private queue: Promise<unknown> = Promise.resolve();
 
-  constructor(name = 'untitled') {
+  private readonly importsDir?: string;
+
+  constructor(name = 'untitled', opts: SessionOptions = {}) {
     this.builder = new ModelBuilder(name);
+    this.importsDir = opts.importsDir;
   }
+
+  private readonly files = async (name: string): Promise<Uint8Array> => {
+    if (!this.importsDir) throw new Error('Imports are not enabled for this session');
+    if (!isSafeFileName(name)) throw new Error(`"${name}" is not a plain file name`);
+    try {
+      return new Uint8Array(await readFile(join(this.importsDir, name)));
+    } catch {
+      throw new Error(`Cannot read "${name}" from the imports folder (is it still there?)`);
+    }
+  };
 
   onChange(fn: () => void): () => void {
     this.listeners.add(fn);
@@ -49,7 +70,9 @@ export class Session {
   /** Rebuild geometry from the current timeline and tell listeners. */
   rebuild(): Promise<Model> {
     const run = this.queue.then(async () => {
-      const model = await buildModel(this.builder.toJSON());
+      const model = await buildModel(this.builder.toJSON(), {
+        files: this.importsDir ? this.files : undefined,
+      });
       this.model = model;
       try {
         this.meshes = model.report.ok || model.bodies.size > 0 ? meshBodies(model) : [];

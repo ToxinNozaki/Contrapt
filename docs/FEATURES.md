@@ -95,11 +95,21 @@ Status: `[ ]` planned · `[~]` in progress · `[x]` done · `[-]` dropped (say w
 
 ## P7 — Interchange
 
-- [~] STEP export done (2026-11-15); import pending
+- [x] STEP import and export — import is a timeline step with scale/position and a checksum (2026-11-15)
 - [~] STL export done (2026-11-15); 3MF, OBJ, glTF pending
 - [ ] DXF/SVG export
 - [ ] URDF export
 - [ ] IGES — stretch
+
+- [x] Format detection and plain-language guidance for ~25 CAD formats (Inventor .ipt/.iam/.idw/.ipn, SolidWorks, Fusion, CATIA, NX/Creo, Rhino, FreeCAD, Parasolid, ACIS, DWG/DXF, meshes) — 2026-11-15
+- [ ] Inventor .ipt/.iam direct reading: evaluate the open-source read-only codec (cadmpeg-codec-inventor, Rust, early) as an experimental reader, and InventorLoader (parts only) as a reference — requested 2026-11-15
+- [ ] Inventor bridge A: drive a locally installed Inventor (Windows automation / Apprentice) to export STEP from .ipt/.iam and DXF/DWG/PDF from .idw — requested 2026-11-15
+- [ ] Inventor bridge B: Autodesk Platform Services Model Derivative adapter (IPT/IAM to STEP/OBJ/STL/IGES; user supplies their own credentials; .idw only converts to viewer formats there) — requested 2026-11-15
+- [ ] .idw drawings: import as 2D reference (via DXF/PDF), pull dimensions and notes where possible — requested 2026-11-15
+- [ ] IGES import; mesh import (STL/OBJ/3MF/glTF as approximate bodies); DXF/SVG 2D import into sketches — 2026-11-15
+- [ ] STEP assembly structure kept (separate parts, names, colours) instead of one compound body — 2026-11-15
+- [ ] STEP unit detection with warnings; imported-body validity/healing checks — 2026-11-15
+- [ ] Native readers for SolidWorks/Fusion/CATIA/NX/Creo (all proprietary; STEP route for now) — 2026-11-15
 
 ## P8 — Viewer
 
@@ -136,6 +146,17 @@ Status: `[ ]` planned · `[~]` in progress · `[x]` done · `[-]` dropped (say w
 - [ ] Per-op convenience tools (add_box, add_fillet, ...) if weaker/local models struggle with the generic add_step — added 2026-11-15
 - [ ] Viewer: click a body to highlight its step, hover to read dimensions, section plane, themes toggle — added 2026-11-15
 - [ ] Live human edits in the viewer (change a parameter by dragging/typing) feeding back to the timeline — added 2026-11-15
+
+## P12 — Engineering knowledge and advanced prompts (added 2026-11-15)
+- [x] Knowledge-pack system: markdown packs with front matter, loader, tools (list_knowledge/get_knowledge), MCP resources — 2026-11-15
+- [x] 18 packs: engineering method, safety and ethics, strength and stiffness, materials, fasteners and joints, tolerances and fits, 3D printing, CNC and laser, sheet metal, molding and casting, mechanisms, motors and electronics, thermal and fluids, structures and frames, robotics and controls, failure modes, importing CAD files, Contrapt modelling patterns — 2026-11-15
+- [x] 9 playbooks (advanced prompts): engineer, design_part, design_review, design_for_process, strength_check, size_mechanism, brainstorm_invention, explain_design, build_pack; as MCP prompts and as the get_playbook tool — 2026-11-15
+- [x] Tests recompute every worked example in the packs, check links/front matter, and block personal info — 2026-11-15
+- [ ] Expand packs: gears in depth, welding design, springs, bearings selection, vibration and acoustics, composites, electronics enclosures/EMC, woodworking joinery, CNC fixturing, cost estimating, ergonomics, fluid power circuits — see knowledge/README.md
+- [ ] Citations for every number in the packs, plus an expert-review pass (invite engineers via GitHub) — added 2026-11-15
+- [ ] Export packs as a Claude agent skill bundle and a ChatGPT custom-instructions file — added 2026-11-15
+- [ ] More playbooks: enclosure design, robot arm design, woodworking, mechanism synthesis, product teardown, cost-down — added 2026-11-15
+- [ ] Wire packs into the Proof Loop: specs and checks that cite the pack rules (e.g. min wall for the chosen process) — added 2026-11-15
 
 ## P10 — Release
 

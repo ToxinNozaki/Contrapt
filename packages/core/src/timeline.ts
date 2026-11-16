@@ -4,6 +4,7 @@
 // scripts compile into the same steps. Rebuilding the timeline always reproduces the geometry.
 // Any numeric field may be a number or an expression string that references parameters.
 import { z } from 'zod';
+import { isSafeFileName } from './import.ts';
 
 export const TIMELINE_VERSION = 1;
 
@@ -91,7 +92,28 @@ const base = {
 
 const Mode = z.enum(['new', 'add', 'cut']).describe('new body, add to target, or cut from target');
 
+const FileName = z
+  .string()
+  .refine(
+    isSafeFileName,
+    'plain file name only (letters, digits, space, _ . ( ) + -); no folders or ".."',
+  );
+
 export const StepInput = z.discriminatedUnion('op', [
+  z.object({
+    ...base,
+    op: z.literal('import'),
+    file: FileName.describe('a file in the imports folder (STEP only for now)'),
+    scale: Num.optional().describe(
+      'multiply all dimensions (e.g. 25.4 for a model that came in as inches)',
+    ),
+    at: Vec3.optional().describe('translate the imported body'),
+    sha256: z
+      .string()
+      .regex(/^[0-9a-f]{64}$/)
+      .optional()
+      .describe('checksum recorded at import time; the build fails if the file later changes'),
+  }),
   z.object({ ...base, op: z.literal('box'), w: Num, d: Num, h: Num, at: Vec3.optional() }),
   z.object({
     ...base,

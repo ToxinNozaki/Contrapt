@@ -17,7 +17,8 @@
     "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
-    "ci": "npm run lint && npm run typecheck && npm test"
+    "ci": "npm run lint && npm run typecheck && npm test",
+    "setup-help": "node tools/print-config.mjs"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.6.8",

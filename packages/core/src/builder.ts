@@ -12,6 +12,7 @@ import {
 } from './timeline.ts';
 
 export const STEP_OPS: StepOp[] = [
+  'import',
   'box',
   'cylinder',
   'sphere',
@@ -124,7 +125,8 @@ export class ModelBuilder {
     const ids = new Set<string>();
     for (const s of this.tl.steps) {
       if (s.suppressed) continue;
-      if (s.op === 'box' || s.op === 'cylinder' || s.op === 'sphere') ids.add(s.id);
+      if (s.op === 'box' || s.op === 'cylinder' || s.op === 'sphere' || s.op === 'import')
+        ids.add(s.id);
       else if (s.op === 'extrude' && (s.mode ?? 'new') === 'new') ids.add(s.id);
       else if (s.op === 'boolean') {
         ids.delete(s.a);

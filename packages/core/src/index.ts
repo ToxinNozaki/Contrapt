@@ -1,4 +1,5 @@
 export { ModelBuilder, STEP_OPS } from './builder.ts';
+export type { BuildOptions, FileProvider } from './engine.ts';
 export {
   type BuildReport,
   buildModel,
@@ -8,6 +9,16 @@ export {
 } from './engine.ts';
 export { exportStep, exportStl, meshBodies, type ViewerMesh } from './export.ts';
 export { evalExpr, exprNames, type Num } from './expr.ts';
+export {
+  describeStep,
+  detectFormat,
+  type FormatInfo,
+  type FormatKind,
+  type FormatSupport,
+  isSafeFileName,
+  type StepSummary,
+  sniffContent,
+} from './import.ts';
 export { initKernel, kernelDiagnostics } from './kernel.ts';
 export { type BodyInfo, describeBody } from './measure.ts';
 export { compileScript, type ScriptOptions } from './script.ts';

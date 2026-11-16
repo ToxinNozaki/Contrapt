@@ -2,7 +2,7 @@
 // contrapt-mcp: MCP server over stdio + live viewer on localhost.
 //   node packages/mcp/src/cli.ts [--no-viewer] [--port 4317] [--out ./contrapt-out]
 // stdout is reserved for the MCP protocol; all human-readable output goes to stderr.
-import { resolve } from 'node:path';
+import { join, resolve } from 'node:path';
 import { initKernel } from '@contrapt/core';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { createMcpServer } from './server.ts';
@@ -19,10 +19,9 @@ const debug = !!process.env.CONTRAPT_DEBUG;
 
 await initKernel({ onLog: (line) => debug && log(`kernel: ${line}`) });
 
-const session = new Session('untitled');
-await session.rebuild();
-
 const outDir = resolve(arg('--out') ?? process.env.CONTRAPT_OUT ?? 'contrapt-out');
+const session = new Session('untitled', { importsDir: join(outDir, 'imports') });
+await session.rebuild();
 let viewerUrl: string | undefined;
 if (!process.argv.includes('--no-viewer')) {
   const port = arg('--port') ? Number(arg('--port')) : undefined;

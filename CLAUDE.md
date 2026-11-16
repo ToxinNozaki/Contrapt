@@ -27,6 +27,9 @@ Read these, in this order, before doing anything else in this repo:
   Use repo-relative paths. Scan the diff for these before every commit.
 - **Don't put "Inventor", "Autodesk", or "Claude" in the product name.** Referential use
   ("an open-source alternative to Autodesk Inventor") in docs is fine; see the naming note in DESIGN.md.
+- **Knowledge packs (`packages/mcp/knowledge/`) must be correct.** Check every number against a reputable source, work
+  the example yourself, and keep the test that recomputes it. Mark typical values as typical; never imply Contrapt
+  simulates anything it does not.
 - Challenge the owner's ideas and propose your own before building anything with a real tradeoff
   (they asked for this); with delegated autonomy, don't re-ask permission for each item.
 

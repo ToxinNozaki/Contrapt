@@ -1,5 +1,9 @@
+export { ALL_TOOLS } from './all-tools.ts';
 export { DOC_TOPICS, type DocTopic, getDocs } from './docs.ts';
+export { getKnowledge, type KnowledgeDoc, knowledgeIndex, loadKnowledge } from './knowledge.ts';
+export { buildPlaybook, PLAYBOOKS, type Playbook, playbookNames } from './prompts.ts';
 export { createMcpServer } from './server.ts';
+export type { SessionOptions } from './session.ts';
 export { Session, type Snapshot } from './session.ts';
 export { TOOLS, type ToolContext, type ToolDef } from './tools.ts';
 export { startViewer, type ViewerHandle, type ViewerOptions } from './viewer.ts';

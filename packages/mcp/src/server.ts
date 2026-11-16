@@ -1,19 +1,22 @@
-// MCP server: registers every tool from tools.ts plus a docs resource.
-// NEVER write to stdout in this process: stdout carries the JSON-RPC stream over stdio.
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+// MCP server: registers every tool, the engineering playbooks as MCP prompts, and docs/knowledge as
+// MCP resources. NEVER write to stdout in this process: stdout carries the JSON-RPC stream over stdio.
+import { McpServer, ResourceTemplate } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { ALL_TOOLS } from './all-tools.ts';
 import { getDocs } from './docs.ts';
-import { TOOLS, type ToolContext } from './tools.ts';
+import { getKnowledge, loadKnowledge } from './knowledge.ts';
+import { PLAYBOOKS } from './prompts.ts';
+import type { ToolContext } from './tools.ts';
 
 export function createMcpServer(ctx: ToolContext): McpServer {
   const server = new McpServer(
     { name: 'contrapt', version: '0.0.0' },
     {
       instructions:
-        'Contrapt is an exact parametric CAD workbench. Call get_docs first. Build with add_step or run_script; after every change read the returned build report (per-step status + measured volume/bbox/centre of mass) and fix the first error before continuing. Use view to give the user the live viewer link.',
+        'Contrapt is an exact parametric CAD workbench with a live viewer. Start with get_playbook {name:"engineer"} (or the "engineer" prompt) to work like a senior design engineer, and call get_docs for tool conventions. Use list_knowledge / get_knowledge for engineering formulas, materials, fasteners, tolerances, and manufacturing rules before designing. Build with add_step or run_script; after every change read the returned build report (per-step status + measured volume/bbox/centre of mass) and fix the first error before continuing. To bring in a file from another CAD program, use inspect_file then import_file (STEP works now; Inventor .ipt/.iam/.idw must be exported as STEP first). Contrapt does not yet simulate stress or motion: say hand estimates are estimates. Use view to give the user the live viewer link.',
     },
   );
 
-  for (const t of TOOLS) {
+  for (const t of ALL_TOOLS) {
     server.registerTool(
       t.name,
       {
@@ -34,6 +37,25 @@ export function createMcpServer(ctx: ToolContext): McpServer {
     );
   }
 
+  // Playbooks as MCP prompts (for clients with a prompt picker).
+  for (const p of PLAYBOOKS) {
+    server.registerPrompt(
+      p.name,
+      { title: p.title, description: p.description, argsSchema: p.args },
+      (args: Record<string, unknown>) => ({
+        messages: [
+          {
+            role: 'user' as const,
+            content: {
+              type: 'text' as const,
+              text: p.build(args as Record<string, string | undefined>),
+            },
+          },
+        ],
+      }),
+    );
+  }
+
   server.registerResource(
     'docs',
     'contrapt://docs',
@@ -42,6 +64,30 @@ export function createMcpServer(ctx: ToolContext): McpServer {
       mimeType: 'text/markdown',
     },
     async (uri) => ({ contents: [{ uri: uri.href, mimeType: 'text/markdown', text: getDocs() }] }),
+  );
+
+  server.registerResource(
+    'knowledge',
+    new ResourceTemplate('contrapt://knowledge/{topic}', {
+      list: async () => ({
+        resources: loadKnowledge().map((d) => ({
+          uri: `contrapt://knowledge/${d.id}`,
+          name: d.title,
+          description: d.summary,
+          mimeType: 'text/markdown',
+        })),
+      }),
+    }),
+    { description: 'Engineering knowledge packs', mimeType: 'text/markdown' },
+    async (uri, vars) => ({
+      contents: [
+        {
+          uri: uri.href,
+          mimeType: 'text/markdown',
+          text: getKnowledge(String(vars.topic)).body,
+        },
+      ],
+    }),
   );
 
   return server;

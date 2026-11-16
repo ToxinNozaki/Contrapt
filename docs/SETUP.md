@@ -30,6 +30,10 @@ Open the printed address (usually `http://localhost:4317/`). Drag to orbit, scro
 
 ## 3. Connect your AI
 
+> **Easiest:** run `npm run setup-help` in the Contrapt folder. It prints the exact commands and JSON for
+> your machine with the real path already filled in. (Pasting `/path/to/Contrapt` literally is the most
+> common mistake: the server then "connects" to nothing and fails.)
+
 In every case the server command is the same:
 
 ```
@@ -41,6 +45,8 @@ Exports and saved models go in a `contrapt-out` folder in the directory the AI a
 change it with `--out /some/folder` or the `CONTRAPT_OUT` environment variable.
 
 ### Claude Code
+
+Verified working: after adding, `claude mcp list` shows `contrapt` as **Connected**.
 
 ```bash
 claude mcp add contrapt -- node /path/to/Contrapt/packages/mcp/src/cli.ts
@@ -85,6 +91,26 @@ supports local stdio servers.
 The AI gets a build report after every change (which steps worked, plus measured volume, size and centre of
 mass), so it can check its own work and fix mistakes.
 
+## 4b. Make the AI think like an engineer
+
+Contrapt ships **engineering knowledge** (materials, strength formulas, fasteners, tolerances, 3D printing, CNC/laser,
+sheet metal, molding, mechanisms, motors, thermal, structures, robotics, safety, failure modes) and **playbooks**
+(advanced prompts). Start a conversation with:
+
+- "Use the Contrapt `engineer` playbook." (or pick the **engineer** prompt in apps with a prompt menu)
+- "Use the `design_part` playbook: a bracket that holds a 3 kg shelf, 3D printed in PETG."
+- "Use the `design_review` playbook on the current model."
+
+Other playbooks: `design_for_process`, `strength_check`, `size_mechanism`, `brainstorm_invention`, `explain_design`,
+`build_pack`. Apps without prompt menus can use the `get_playbook` tool; `list_knowledge` / `get_knowledge` read any topic.
+
+## 4c. Bring in a file from another CAD program
+
+Put the file in the `imports` folder inside the output folder (`contrapt-out/imports`), then ask: "Inspect and import
+`Bracket.step`." STEP files import as exact solids you can measure and edit. **Inventor files (.ipt, .iam, .idw)** are a
+closed format: Contrapt recognises them and tells the AI how to export STEP from Inventor (File > Export > CAD Format >
+STEP). Direct reading and Inventor bridges are planned. Files are only read from that folder, by plain name.
+
 ## 5. Tools at a glance
 
 | Tool | What it does |
@@ -98,6 +124,8 @@ mass), so it can check its own work and fix mistakes.
 | `export_model` | STEP (exact CAD) or STL (3D printing) into the output folder |
 | `save_model`, `load_model`, `list_models` | Keep work between sessions |
 | `view` | The live viewer link |
+| `inspect_file`, `import_file` | Identify a file from another CAD program; import a STEP as an exact body |
+| `get_playbook`, `list_knowledge`, `get_knowledge` | Expert prompts and engineering knowledge for any client |
 
 ## 6. Troubleshooting
 

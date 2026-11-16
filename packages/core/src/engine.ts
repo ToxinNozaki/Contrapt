@@ -1,6 +1,8 @@
 // Rebuild engine: turns a Timeline into geometry, reporting per-step success so an AI (or a human)
 // can see exactly which step failed and why. Steps run in order; after the first failure the rest
 // are reported as "skipped" (a feature tree can't meaningfully continue past a broken feature).
+
+import { createHash } from 'node:crypto';
 import {
   type Drawing,
   draw,
@@ -10,12 +12,14 @@ import {
   drawRoundedRectangle,
   EdgeFinder,
   FaceFinder,
+  importSTEP,
   makeBox,
   makeCylinder,
   makeSphere,
   type Shape3D,
 } from 'replicad';
 import { evalExpr, exprNames, type Num } from './expr.ts';
+import { detectFormat } from './import.ts';
 import { initKernel } from './kernel.ts';
 import { type BodyInfo, describeBody } from './measure.ts';
 import { as3D } from './shapes.ts';
@@ -67,7 +71,15 @@ export function resolveParams(params: Timeline['params']): Record<string, number
   return out;
 }
 
+/** Supplies the bytes of an imported file by plain name (the host decides where files live). */
+export type FileProvider = (name: string) => Promise<Uint8Array>;
+
+export interface BuildOptions {
+  files?: FileProvider;
+}
+
 type Ctx = {
+  files?: FileProvider;
   n: (v: Num) => number;
   bodies: Map<string, Shape3D>;
   sketches: Map<string, { drawing: Drawing; plane: string; offset: number }>;
@@ -179,7 +191,7 @@ function assertCount(kind: string, found: number, expect: number | undefined) {
 }
 
 // ---- step execution -----------------------------------------------------------------------------
-function runStep(step: Step, ctx: Ctx) {
+async function runStep(step: Step, ctx: Ctx): Promise<void> {
   const { n } = ctx;
   const vec = (v: [Num, Num, Num] | undefined): [number, number, number] =>
     v ? [n(v[0]), n(v[1]), n(v[2])] : [0, 0, 0];
@@ -283,6 +295,34 @@ function runStep(step: Step, ctx: Ctx) {
       ctx.bodies.set(step.id, r);
       return;
     }
+    case 'import': {
+      if (!ctx.files) throw new Error('This build has no file access, so imports are unavailable');
+      const bytes = await ctx.files(step.file);
+      if (step.sha256) {
+        const h = createHash('sha256').update(bytes).digest('hex');
+        if (h !== step.sha256) {
+          throw new Error(
+            `"${step.file}" has changed since this step was added (checksum mismatch). Remove and re-import it to accept the new version.`,
+          );
+        }
+      }
+      const fmt = detectFormat(step.file, bytes);
+      if (fmt.format !== 'step' || fmt.support !== 'supported') {
+        throw new Error(`Cannot import "${step.file}" (${fmt.name}). ${fmt.howTo}`);
+      }
+      let shape = as3D(await importSTEP(new Blob([bytes as BlobPart])), `import of ${step.file}`);
+      if (step.scale !== undefined) {
+        const k = n(step.scale);
+        if (!(k > 0)) throw new Error('import scale must be greater than 0');
+        shape = shape.scale(k);
+      }
+      if (step.at) {
+        const [x, y, z] = vec(step.at);
+        shape = shape.translate(x, y, z);
+      }
+      ctx.bodies.set(step.id, shape);
+      return;
+    }
     case 'transform': {
       let t = get(ctx, step.target);
       if (step.rotate) {
@@ -303,7 +343,7 @@ function runStep(step: Step, ctx: Ctx) {
 }
 
 /** Build a timeline into geometry. Never throws for model errors: they appear in `report`. */
-export async function buildModel(timeline: Timeline): Promise<Model> {
+export async function buildModel(timeline: Timeline, opts: BuildOptions = {}): Promise<Model> {
   await initKernel();
   const bodies = new Map<string, Shape3D>();
   const reports: StepReport[] = [];
@@ -327,6 +367,7 @@ export async function buildModel(timeline: Timeline): Promise<Model> {
     n: (v) => (typeof v === 'number' ? v : evalExpr(v, (name) => params[name])),
     bodies,
     sketches: new Map(),
+    files: opts.files,
   };
 
   for (const step of timeline.steps) {
@@ -340,7 +381,7 @@ export async function buildModel(timeline: Timeline): Promise<Model> {
     }
     const t0 = performance.now();
     try {
-      runStep(step, ctx);
+      await runStep(step, ctx);
       reports.push({
         id: step.id,
         op: step.op,

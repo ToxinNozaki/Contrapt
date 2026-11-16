@@ -22,14 +22,14 @@ export interface ToolDef {
   run: (args: Record<string, unknown>, ctx: ToolContext) => Promise<string>;
 }
 
-const SafeName = z
+export const SafeName = z
   .string()
   .regex(/^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/, 'letters, digits, _ and - only (no paths or dots)');
 
-const j = (o: unknown) => JSON.stringify(o);
+export const j = (o: unknown) => JSON.stringify(o);
 
 /** Compact feedback after every change: the AI's eyes. */
-function feedback(ctx: ToolContext, headline: string): string {
+export function feedback(ctx: ToolContext, headline: string): string {
   const snap = ctx.session.snapshot();
   const { report } = snap;
   const steps = report.steps;

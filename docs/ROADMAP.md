@@ -62,7 +62,7 @@ timeline and identical geometry (golden tests); editing a parameter rebuilds cor
 stdio + HTTP MCP server; browser viewer on localhost showing the AI's work live. **Done when:** from a
 clean clone, one command starts it, Claude Desktop/Claude Code connect, and "make a bracket with four
 mounting holes" appears in the viewer and exports to STEP. Includes first setup guides.
-_Status:_ server (13 tools), live viewer, and SETUP.md are built and tested (16 MCP tests, incl. a real stdio subprocess). **Remaining:** verify inside real Claude Desktop/Code/LM Studio; publishable `npx` build.
+_Status:_ server (13 tools), live viewer, and SETUP.md are built and tested (16 MCP tests, incl. a real stdio subprocess). **Also added:** 18 engineering knowledge packs and 9 playbooks (advanced prompts) as MCP prompts, resources and tools; STEP import with format detection for ~25 CAD formats. Verified in real Claude Code (`claude mcp list`: Connected). **Remaining:** Claude Desktop and LM Studio checks; publishable `npx` build; HTTP transport.
 
 ### M3 — Sketch and part depth ☐
 
@@ -114,7 +114,7 @@ example design goes from prompt to a printable/cuttable pack and is actually bui
 
 ### M11 — Ecosystem ☐
 
-Standard-parts library (real specs), plugin API, OpenAI-style function adapter + REST, agent
+Importers for other CAD systems (Inventor bridge adapters and an experimental native .ipt/.iam reader; .idw as 2D reference; IGES, mesh, DXF), standard-parts library (real specs), plugin API, OpenAI-style function adapter + REST, agent
 skill/prompt packs, **ContraptBench** (public AI-CAD eval). **Done when:** a third party can add a part
 library or tool without touching core; the benchmark runs against at least three models.
 
@@ -159,6 +159,15 @@ Each: _why it matters_ · size (S/M/L) · status. Big bets are marked 🎯 and n
 - **Reproducible designs** — hash a timeline + library versions; same hash, same geometry, always. · S
 - **Electronics envelope** — place boards, wires, and connectors for fit and clearance (not PCB layout). · M
 
+### Added 2026-11-15 (owner requests and Claude's follow-ups)
+- **Inventor file support** — read .ipt/.iam directly and treat .idw as reference. Closed formats, so the plan is
+  layered: STEP today (works), then a local-Inventor bridge and an Autodesk cloud-converter adapter, then an
+  experimental native reader if the open-source codec proves reliable. · L · in the ledger (P7) 🎯
+- **Knowledge-pack accuracy program** — cite sources for every number and invite engineers to review packs; wrong
+  confident numbers are the biggest risk of an "engineering AI". · M · proposed
+- **Ship the packs as an agent skill** — a Claude skill bundle and a ChatGPT custom-instructions file generated from the
+  same markdown. · S · proposed
+
 ## Risks and how we handle them
 
 | Risk                                        | Plan                                                                               |
@@ -170,4 +179,6 @@ Each: _why it matters_ · size (S/M/L) · status. Big bets are marked 🎯 and n
 | Kernel wasm is large (~23 MB)               | Within budget; lazy-load; revisit smaller builds later                             |
 | Naming/trademark                            | Original name; referential use only; non-affiliation notice                        |
 | Scope creep from the Sandbox                | Exact vs approximate geometry is always labelled; sim trusts only exact            |
+| Confident-but-wrong engineering numbers | Packs flag typical values, tests recompute worked examples, citations + expert review planned, safety pack requires human review for critical designs |
+| Proprietary CAD formats (Inventor etc.) | Recognise and explain now; STEP route works; bridges/native readers phased in; never pretend to read what we cannot |
 | Public repo leaking personal info           | Standing rule + pre-commit scan; noreply git identity                              |

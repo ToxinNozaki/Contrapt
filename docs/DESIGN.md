@@ -13,6 +13,9 @@
 > - **Next up:** finish M2 (verify in real Claude Desktop/Code/LM Studio, `npx` build, HTTP transport), then M3 sketch/part depth. Earlier plan: (1) [done]; (2) [done] timeline/document model in `core`
 >   (JSON schema, rebuild engine, parameters); (3) MCP server skeleton exposing
 >   create-sketch / extrude / fillet / measure / export_step plus `run_script`; (4) minimal live viewer.
+> - **Also done:** engineering knowledge packs (18) + playbooks (9 advanced prompts) via MCP prompts/resources/tools;
+>   STEP import as a timeline step + format detection for ~25 CAD formats (Inventor .ipt/.iam/.idw explained, STEP route).
+>   95 tests pass; real Claude Code connects (`claude mcp list`).
 > - **Roadmap:** see [ROADMAP.md](ROADMAP.md) (milestones M0–M12, Ideas Review process). Owner wants
 >   Claude as lead coder with the project continually evolving.
 > - **Open decisions:** none blocking. See "Open questions" at the bottom.
@@ -72,6 +75,26 @@ parts (exact B-rep, STEP, simulation) are the core, but the sandbox also needs:
 
 Design consequence: the timeline holds both _precise parts_ and _scene objects_; every object says
 whether its geometry is exact or approximate, and the simulator only trusts exact geometry.
+
+## Engineering knowledge and playbooks (added 2026-11-15)
+
+The owner wants AIs using Contrapt to have deep engineering knowledge across disciplines. It lives in
+`packages/mcp/knowledge/*.md` (plain markdown, easy to extend by pull request) and reaches every client three ways:
+the `get_knowledge` tool (works everywhere), MCP resources, and **playbooks**: advanced prompts that embed the right
+packs for a task (design a part, review a design, adapt for a process, hand-check strength, size a mechanism,
+brainstorm an invention, explain a design, prepare the build pack). Principles: be correct (tests recompute every worked
+example), be honest (typical values flagged; never claim a simulation ran; qualified review for safety-critical
+work), and keep growing (see knowledge/README.md and the ledger, P12).
+
+## Importing other CAD systems (added 2026-11-15)
+
+Native Inventor files (.ipt/.iam/.idw/.ipn) are closed formats, so support is layered. **Today:** STEP imports as an exact
+solid (an `import` timeline step with scale/position and a checksum so a changed file fails the build loudly), and
+~25 formats are recognised with accurate how-to-export guidance, so an AI never guesses at a file it cannot read.
+**Next:** a local-Inventor bridge (export STEP/DXF/PDF through Inventor's own automation), an Autodesk cloud converter
+adapter (user's own credentials; IPT/IAM convert to STEP/OBJ/STL/IGES, IDW only to viewer formats), and evaluation of the
+open-source read-only Inventor codec. .idw drawings are 2D: treated as reference, never as 3D geometry.
+Files are read only from `<output>/imports` by plain name; tools never accept paths.
 
 ## Goals / non-goals / anti-goals
 
