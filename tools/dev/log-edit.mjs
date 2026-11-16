@@ -6,8 +6,7 @@ import { appendFileSync, mkdirSync } from 'node:fs';
 import { dirname, isAbsolute, relative, resolve, sep } from 'node:path';
 
 // Git Bash hands Node POSIX-style drive paths (/c/foo); Node on Windows needs C:/foo.
-const norm = (p) =>
-  process.platform === 'win32' ? p.replace(/^\/([a-zA-Z])(?=\/|$)/, '$1:') : p;
+const norm = (p) => (process.platform === 'win32' ? p.replace(/^\/([a-zA-Z])(?=\/|$)/, '$1:') : p);
 
 const root = resolve(norm(process.env.CLAUDE_PROJECT_DIR || process.cwd()));
 const logFile = resolve(root, 'docs', 'edits.auto.log');

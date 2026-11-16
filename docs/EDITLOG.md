@@ -1,7 +1,7 @@
 # Contrapt — edit log
 
-Curated, newest session at the **bottom**. One bullet per meaningful edit: what changed and *why*.
-Every individual file write is *also* recorded automatically in `docs/edits.auto.log` (by a hook),
+Curated, newest session at the **bottom**. One bullet per meaningful edit: what changed and _why_.
+Every individual file write is _also_ recorded automatically in `docs/edits.auto.log` (by a hook),
 so nothing is lost even if a bullet here is missed. Repo-relative paths only (this repo is public).
 
 ## 2026-11-15 — Session 1: name, research, foundations
@@ -49,5 +49,6 @@ so nothing is lost even if a bullet here is missed. Repo-relative paths only (th
   Ideas backlog (ContraptBench, sim-to-real calibration, tolerance analysis, teaching mode, topology
   optimisation, etc.), and a risk table. Linked it from CLAUDE.md and recorded the "Claude is lead coder,
   keep evolving" standing rule there.
-- Privacy: the machine's global git email is a personal address, so this repo's *local* git config uses
+- M0 finished: TypeScript 7 (strict, `erasableSyntaxOnly`, Node native type-stripping so tests run `.ts` directly), Biome for lint+format, GitHub Actions CI. Converted `kernel.js` and the smoke test to TypeScript and added `shapes.ts` (`as3D`) to narrow replicad's wide result union. Gotchas: `biome migrate` silently rewrote `rules.recommended:true` to `preset:none` (linting off!) — restored `preset:recommended` and proved it catches `any`/`==`; excluded `*.md` from Biome so hand-edited docs don't fail CI on prose formatting.
+- Privacy: the machine's global git email is a personal address, so this repo's _local_ git config uses
   the GitHub noreply address; commits must never carry the personal one.

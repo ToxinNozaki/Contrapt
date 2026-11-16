@@ -2,15 +2,15 @@
 
 > **Where we left off** (update this at every stop)
 > - **Date:** 2026-11-15
-> - **Phase:** P0 foundations — nearly done. Public repo live, docs + logging in place, **kernel proven**.
+> - **Phase:** M0 foundations done (TS + lint + CI + proven kernel). Starting **M1 model core**.
 > - **Last thing done:** kernel smoke test passes (8/8): replicad + OpenCASCADE run headless in Node;
 >   exact analytic volumes for extrude/cylinder/cut/fillet; shell; STEP export valid; init ~130 ms;
 >   extrude+fillet rebuild ~10 ms. `packages/core/src/kernel.js` isolates kernel stdout (MCP-safe).
 > - **Decided 2026-11-15 (owner):** the AI describes models **both ways** — step-by-step tool calls
->   *and* scripts — with a saved, diffable **feature timeline (JSON) as the single source of truth**.
+>   _and_ scripts — with a saved, diffable **feature timeline (JSON) as the single source of truth**.
 >   Scripts compile into the timeline; tool calls append to it. Owner's vision: a **sandbox** where the
->   AI can help visualize *almost anything*, not only mechanical parts (see "Sandbox" below).
-> - **Next up:** (1) TypeScript + lint + CI scaffold; (2) the timeline/document model in `core`
+>   AI can help visualize _almost anything_, not only mechanical parts (see "Sandbox" below).
+> - **Next up:** (1) [done]; (2) the timeline/document model in `core`
 >   (JSON schema, rebuild engine, parameters); (3) MCP server skeleton exposing
 >   create-sketch / extrude / fillet / measure / export_step plus `run_script`; (4) minimal live viewer.
 > - **Roadmap:** see [ROADMAP.md](ROADMAP.md) (milestones M0–M12, Ideas Review process). Owner wants
@@ -39,7 +39,7 @@ Everyone else's AI-CAD is "AI draws a shape." Contrapt's claim is **"the AI prov
 
 1. **Specs (requirements as code).** Every design carries machine-checked requirements:
    `mass < 200 g`, `tip deflection under 50 N < 1 mm`, `fits 100×100×100`, `output stroke ≥ 30 mm`,
-   `prints without supports`. After every change the engine reports pass/fail *with the numbers*.
+   `prints without supports`. After every change the engine reports pass/fail _with the numbers_.
    The AI is not allowed to say "done" until the spec is green (the tools make this the natural path).
 2. **Simulator as judge.** Specs can reference simulation results (stress, deflection, natural
    frequency, mechanism travel, motor load), not just geometry.
@@ -70,7 +70,7 @@ parts (exact B-rep, STEP, simulation) are the core, but the sandbox also needs:
 - **Animate:** keyframes and simulation playback, so ideas can be shown moving.
 - **Scale and context:** place things next to a human figure, a table, a room, to judge size.
 
-Design consequence: the timeline holds both *precise parts* and *scene objects*; every object says
+Design consequence: the timeline holds both _precise parts_ and _scene objects_; every object says
 whether its geometry is exact or approximate, and the simulator only trusts exact geometry.
 
 ## Goals / non-goals / anti-goals
@@ -111,9 +111,9 @@ results report their assumptions and limits.
 
 ## How the AI uses it
 
-A tool surface in layers: *model* (sketch, features, assembly), *query* (measure, section,
-interference, render), *specs* (define/check), *simulate* (statics, modal, motion), *optimize*,
-*export* (STEP/STL/3MF/DXF/glTF/URDF, drawings, Build Pack). Selection is by description
+A tool surface in layers: _model_ (sketch, features, assembly), _query_ (measure, section,
+interference, render), _specs_ (define/check), _simulate_ (statics, modal, motion), _optimize_,
+_export_ (STEP/STL/3MF/DXF/glTF/URDF, drawings, Build Pack). Selection is by description
 (e.g. "the circular rim of the top face"), with count assertions, not fragile indices.
 Every tool returns structured results plus a short human-readable summary.
 

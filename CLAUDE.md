@@ -32,7 +32,7 @@ Read these, in this order, before doing anything else in this repo:
 
 ## Quick orientation
 
-- Product name: **Contrapt**. Tagline: AI-drivable CAD + simulator that *proves* a design works.
+- Product name: **Contrapt**. Tagline: AI-drivable CAD + simulator that _proves_ a design works.
 - Stack: TypeScript monorepo (npm workspaces), OpenCASCADE via WASM for geometry,
   a built-in MCP server, a browser viewer. Details and reasoning in DESIGN.md.
 - Keep it lightweight: no Electron, no heavyweight installs. Budget is in DESIGN.md.

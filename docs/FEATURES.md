@@ -4,15 +4,18 @@ Status: `[ ]` planned · `[~]` in progress · `[x]` done · `[-]` dropped (say w
 **Never delete a line.** Add new features at the bottom of their section, with the date.
 
 ## P0 — Foundations
+
 - [x] Repo folder, git, orientation docs (CLAUDE.md, DESIGN.md, FEATURES.md, EDITLOG.md) — 2026-11-15
 - [x] Edit-log hook script + local settings example — 2026-11-15
-- [~] npm-workspaces monorepo scaffold — workspaces + `core` package + node:test runner done; TypeScript and lint still to do
+- [x] npm-workspaces monorepo scaffold: workspaces, `core` package, node:test runner, TypeScript 7 (strict, native type-stripping), Biome lint/format — 2026-11-15
+- [x] GitHub Actions CI (lint + typecheck + tests) — 2026-11-15
 - [x] LICENSE (MIT), NOTICE, README stub — 2026-11-15
 - [~] GitHub repo (public), description, topics — CONTRIBUTING and CI still to do
 - [x] Kernel smoke test in Node (extrude, fillet, shell, STEP) and kernel pick — replicad + OCCT, 2026-11-15
 - [x] Kernel stdout isolation so the MCP stdio channel can't be corrupted — 2026-11-15
 
 ## P1 — Sketch and part modeling
+
 - [ ] Sketch entities: line, arc, circle, rectangle, polygon, ellipse, slot, spline, point
 - [ ] Constraints: coincident, horizontal, vertical, parallel, perpendicular, tangent, equal,
       concentric, midpoint, symmetric, fix; dimensions: distance, angle, radius/diameter
@@ -29,6 +32,7 @@ Status: `[ ]` planned · `[~]` in progress · `[x]` done · `[-]` dropped (say w
 - [ ] Materials library with density, modulus, yield, Poisson, CTE, cost/kg
 
 ## P2 — Query and verify (the AI's eyes)
+
 - [ ] Mass properties: volume, area, mass, centre of mass, inertia tensor
 - [ ] Bounding box, distance between entities, angle between faces
 - [ ] Section views and cut-plane renders
@@ -39,6 +43,7 @@ Status: `[ ]` planned · `[~]` in progress · `[x]` done · `[-]` dropped (say w
 - [ ] Topology report (faces/edges/loops) as structured data
 
 ## P3 — Assemblies
+
 - [ ] Components, grounding, instance patterns
 - [ ] Joints: rigid, revolute, slider, cylindrical, planar, ball, screw
 - [ ] Gear, rack, belt/chain, cam relationships
@@ -47,6 +52,7 @@ Status: `[ ]` planned · `[~]` in progress · `[x]` done · `[-]` dropped (say w
 - [ ] BOM with part numbers and quantities
 
 ## P4 — Proof Loop (differentiator)
+
 - [ ] Spec language: geometric, mass, and simulation-backed requirements
 - [ ] `check_specs` returning pass/fail with numbers after every change
 - [ ] `optimize` over named parameters against specs
@@ -57,6 +63,7 @@ Status: `[ ]` planned · `[~]` in progress · `[x]` done · `[-]` dropped (say w
 - [ ] Rules layer (iLogic-style) — stretch
 
 ## P5 — Simulation
+
 - [ ] Static FEA: beam elements, validated vs analytic
 - [ ] Static FEA: 3D tetrahedral (mesher + solver), stress/displacement/safety factor
 - [ ] Modal analysis (natural frequencies/mode shapes)
@@ -69,6 +76,7 @@ Status: `[ ]` planned · `[~]` in progress · `[x]` done · `[-]` dropped (say w
 - [ ] Every result reports assumptions and limits
 
 ## P6 — Manufacturing and documentation
+
 - [ ] Sheet metal: flange, hem, bend, unfold, flat pattern, DXF
 - [ ] Frames/weldments: structural member library, miters, cut list
 - [ ] Tube and pipe — stretch
@@ -80,6 +88,7 @@ Status: `[ ]` planned · `[~]` in progress · `[x]` done · `[-]` dropped (say w
 - [ ] Build Pack: BOM + cut list + files + assembly steps + manufacturability report
 
 ## P7 — Interchange
+
 - [ ] STEP import/export
 - [ ] STL, 3MF, OBJ, glTF export
 - [ ] DXF/SVG export
@@ -87,6 +96,7 @@ Status: `[ ]` planned · `[~]` in progress · `[x]` done · `[-]` dropped (say w
 - [ ] IGES — stretch
 
 ## P8 — Viewer
+
 - [ ] Browser viewer (three.js) served on localhost, live-updating as the AI works
 - [ ] Orbit/pan/zoom, section, explode, wireframe, measure
 - [ ] Feature tree and timeline panel
@@ -94,6 +104,7 @@ Status: `[ ]` planned · `[~]` in progress · `[x]` done · `[-]` dropped (say w
 - [ ] Manual modeling UI (so a human can sketch and edit too)
 
 ## P9 — MCP and AI integration
+
 - [ ] MCP server (stdio + streamable HTTP) exposing all layers
 - [ ] MCP resources (model state, docs, material/parts library) and prompts
 - [ ] Agent skill / system-prompt pack for Claude, ChatGPT, and local models
@@ -101,6 +112,7 @@ Status: `[ ]` planned · `[~]` in progress · `[x]` done · `[-]` dropped (say w
 - [ ] Setup guides per client (Claude Desktop, Claude Code, ChatGPT, LM Studio/Ollama)
 
 ## P11 — Sandbox / visualize anything (added 2026-11-15)
+
 - [ ] Feature-timeline JSON schema as the single source of truth (tool calls append; scripts compile to it)
 - [ ] Script mode: `run_script` compiles a sandboxed script into timeline steps
 - [ ] Scene: objects with transforms, groups, ground/environment, lights, cameras
@@ -113,6 +125,7 @@ Status: `[ ]` planned · `[~]` in progress · `[x]` done · `[-]` dropped (say w
 - [ ] Scene presets (workshop, studio, outdoors)
 
 ## P10 — Release
+
 - [ ] README with GIF/screenshots and 60-second quick start
 - [ ] GitHub topics, description, social preview image
 - [ ] Examples gallery (bracket, gearbox, linkage, enclosure, robot arm)

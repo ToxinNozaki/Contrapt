@@ -4,25 +4,30 @@
 // stdout. An MCP stdio server speaks JSON-RPC on stdout, so ANY stray byte there corrupts
 // the protocol. We therefore route all kernel output to a caller-supplied sink (default:
 // collected in memory, optionally forwarded to stderr) and never let it reach stdout.
-import initOpenCascade from 'replicad-opencascadejs';
+
 import { setOC } from 'replicad';
+import initOpenCascade from 'replicad-opencascadejs';
 
-let ready;
-const diagnostics = [];
+type OpenCascade = Awaited<ReturnType<typeof initOpenCascade>>;
 
-/**
- * Initialise the geometry kernel once and return the OpenCascade instance.
- * @param {{ onLog?: (line: string, isError: boolean) => void }} [opts]
- */
-export function initKernel(opts = {}) {
+export interface KernelOptions {
+  /** Called for every line the kernel prints. Never write this to stdout in an MCP server. */
+  onLog?: (line: string, isError: boolean) => void;
+}
+
+let ready: Promise<OpenCascade> | undefined;
+const diagnostics: string[] = [];
+
+/** Initialise the geometry kernel once and return the OpenCascade instance. */
+export function initKernel(opts: KernelOptions = {}): Promise<OpenCascade> {
   if (!ready) {
     const sink = opts.onLog ?? (() => {});
     ready = initOpenCascade({
-      print: (t) => {
+      print: (t: string) => {
         diagnostics.push(t);
         sink(t, false);
       },
-      printErr: (t) => {
+      printErr: (t: string) => {
         diagnostics.push(t);
         sink(t, true);
       },
@@ -35,6 +40,6 @@ export function initKernel(opts = {}) {
 }
 
 /** Kernel diagnostics captured so far (useful when a build fails). */
-export function kernelDiagnostics() {
+export function kernelDiagnostics(): string[] {
   return diagnostics.slice();
 }

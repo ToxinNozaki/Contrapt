@@ -5,19 +5,19 @@ the owner sets direction and approves big bets. Updated whenever scope, order, o
 never left to rot. Detail per feature lives in [FEATURES.md](FEATURES.md); the "why" lives in
 [DESIGN.md](DESIGN.md); what changed lives in [EDITLOG.md](EDITLOG.md).
 
-_Last updated: 2026-11-15 · Current milestone: **M0 → M1**_
+_Last updated: 2026-11-15 · Current milestone: **M1**_
 
 ## How this roadmap stays alive
 
 1. **Update on every stop.** When work lands or plans change: tick the milestone, adjust "Now / Next /
    Later", and refresh the date above. Same rule as the other logs.
 2. **Ideas Review at ~80%.** When a milestone's exit criteria are about 80% met, Claude runs an
-   *Ideas Review* before closing it out:
+   _Ideas Review_ before closing it out:
    - Re-read the Proposed Ideas backlog below; promote, reshape, or drop items (never silently delete —
      mark dropped with a reason).
    - Dogfood: build something real with Contrapt and note every place it fought us.
    - Scan the field (new AI-CAD/MCP projects, kernels, solvers) for things we should match or beat.
-   - Add the best new ideas, each with *why it matters* and a rough size. Big bets go to the owner for a
+   - Add the best new ideas, each with _why it matters_ and a rough size. Big bets go to the owner for a
      yes/no; small ones Claude just adds and builds.
 3. **Claude proposes, the owner steers.** Claude adds its own features over time (that is the job);
    anything with a real tradeoff gets pushed back on and surfaced before building.
@@ -27,98 +27,112 @@ _Last updated: 2026-11-15 · Current milestone: **M0 → M1**_
 
 ## Versions at a glance
 
-| Version | Milestone | You can… |
-|---|---|---|
-| 0.1 | M1–M2 | Tell an AI to model a part; watch it live; export STEP/STL |
-| 0.2 | M3–M4 | Constrained sketches, full part features, measure/section/interference |
-| 0.3 | M5 | The **Proof Loop**: specs, auto-check, optimize, journal |
-| 0.4 | M6 | Assemblies, joints, exploded views, BOM |
-| 0.5 | M7–M8 | Validated stress/vibration and motion simulation |
-| 0.6 | M9 | The **Sandbox**: scenes, free-form shapes, animation, scale references |
-| 0.7 | M10 | Drawings, sheet metal, frames, print/laser checks, **Build Pack** |
-| 0.8 | M11 | Standard-parts library, plugin API, ContraptBench |
-| 1.0 | M12 | Polished release: docs site, gallery, npm publish, setup guides for every AI client |
+| Version | Milestone | You can…                                                                            |
+| ------- | --------- | ----------------------------------------------------------------------------------- |
+| 0.1     | M1–M2     | Tell an AI to model a part; watch it live; export STEP/STL                          |
+| 0.2     | M3–M4     | Constrained sketches, full part features, measure/section/interference              |
+| 0.3     | M5        | The **Proof Loop**: specs, auto-check, optimize, journal                            |
+| 0.4     | M6        | Assemblies, joints, exploded views, BOM                                             |
+| 0.5     | M7–M8     | Validated stress/vibration and motion simulation                                    |
+| 0.6     | M9        | The **Sandbox**: scenes, free-form shapes, animation, scale references              |
+| 0.7     | M10       | Drawings, sheet metal, frames, print/laser checks, **Build Pack**                   |
+| 0.8     | M11       | Standard-parts library, plugin API, ContraptBench                                   |
+| 1.0     | M12       | Polished release: docs site, gallery, npm publish, setup guides for every AI client |
 
 ## Milestones
 
 Status: ☐ not started · ◐ in progress · ☑ done. "Done when" = exit criteria.
 
-### M0 — Foundations ◐ (about 70%)
+### M0 — Foundations ☑
+
 Repo, docs, logging, kernel proof. **Done when:** TypeScript + lint + CI green on every push; kernel
 smoke test runs in CI.
+
 - ☑ Public repo, docs, edit-log hook, kernel proven (8/8), stdout isolation
-- ☐ TypeScript, lint, CI
+- ☑ TypeScript, lint, CI (workflow added; first run verified on GitHub)
 
 ### M1 — Model core ☐ → Next
+
 The feature-timeline JSON (single source of truth), rebuild engine, parameters, tool-call API and
 script compiler. **Done when:** a script and an equivalent sequence of tool calls produce an identical
 timeline and identical geometry (golden tests); editing a parameter rebuilds correctly.
 
 ### M2 — MCP server + live viewer ☐
+
 stdio + HTTP MCP server; browser viewer on localhost showing the AI's work live. **Done when:** from a
 clean clone, one command starts it, Claude Desktop/Claude Code connect, and "make a bracket with four
 mounting holes" appears in the viewer and exports to STEP. Includes first setup guides.
 
 ### M3 — Sketch and part depth ☐
+
 planegcs-backed constrained sketches; extrude/revolve/sweep/loft, fillet/chamfer/shell/draft, holes,
 patterns, mirror, booleans, work planes, feature edit/suppress/reorder. **Done when:** a library of
 ~20 reference parts rebuilds with correct volume/area/centre of mass.
 
 ### M4 — Query and verify ☐
+
 Measure, section, interference, wall-thickness, selection-by-description with `expect`, render
-snapshots for the AI to *see* its work. **Done when:** the AI can detect and fix its own mistakes in a
+snapshots for the AI to _see_ its work. **Done when:** the AI can detect and fix its own mistakes in a
 scripted "broken part" benchmark.
 
 ### M5 — The Proof Loop ☐ (the differentiator)
+
 Specs-as-code, `check_specs`, `optimize`, Design Journal, variant compare, `what_could_go_wrong`.
 **Done when:** "lightest bracket that holds 50 N with <1 mm deflection" is solved end-to-end by an AI
 in one conversation, and the journal shows every iteration.
 
 ### M6 — Assemblies ☐
+
 Components, joints (rigid/revolute/slider/cylindrical/planar/ball), gears/racks/belts/cams, exploded
 views, interference + range-of-motion checks, BOM. **Done when:** a multi-part gearbox assembles,
 moves through its joint ranges, and produces a BOM.
 
 ### M7 — Static and modal simulation ☐
+
 Beam solver, then 3D tetrahedral (mesher + solver), stress/displacement/safety factor, modal,
 buckling. **Done when:** validation suite (cantilever, beam modes, plate-with-hole, Euler buckling)
 passes within stated tolerances and runs in CI; every result prints its assumptions and limits.
 
 ### M8 — Dynamics and mechanisms ☐
+
 Rigid-body dynamics, motors/springs/dampers/friction/contacts, closed linkages and gear trains, motion
 studies, plots, playback. Rapier-vs-custom decision made by a benchmark on four-bars and gear trains.
 **Done when:** pendulum period, four-bar kinematics, and gear ratios match analytic answers.
 
 ### M9 — The Sandbox ☐
+
 Scenes, lights, cameras, free-form/approximate geometry layer, mesh import, materials, labels,
 saved views, scale references, keyframe animation, GIF/PNG export. **Done when:** "show me a marble
 run on a desk next to a coffee mug" builds, renders, and animates in one session.
 
 ### M10 — Make it real ☐
+
 2D drawings, sheet metal, frames/weldments, plastic features, 3D-print/laser/CNC checkers, **Build
 Pack** (BOM + cut list + files + assembly steps + manufacturability report). **Done when:** one
 example design goes from prompt to a printable/cuttable pack and is actually built.
 
 ### M11 — Ecosystem ☐
+
 Standard-parts library (real specs), plugin API, OpenAI-style function adapter + REST, agent
 skill/prompt packs, **ContraptBench** (public AI-CAD eval). **Done when:** a third party can add a part
 library or tool without touching core; the benchmark runs against at least three models.
 
 ### M12 — 1.0 release ☐
+
 Docs site, examples gallery, GIF-first README, social preview, npm publish, per-client setup guides
 (Claude Desktop, Claude Code, ChatGPT, LM Studio/Ollama), contribution guide. **Done when:** a stranger
 goes from README to first modeled part in under five minutes.
 
 ## Now / Next / Later
 
-- **Now:** M0 — TypeScript, lint, CI.
-- **Next:** M1 — timeline schema + rebuild engine; then M2 — MCP + viewer (earliest "wow").
+- **Now:** M1 — timeline schema + rebuild engine.
+- **Next:** M2 — MCP + viewer (earliest "wow").
 - **Later:** M3 onward in order; Proof Loop (M5) deliberately lands before assemblies because it is
   what makes the project different.
 
 ## Proposed Ideas (Claude's backlog — promoted at each Ideas Review)
 
-Each: *why it matters* · size (S/M/L) · status. Big bets are marked 🎯 and need the owner's yes.
+Each: _why it matters_ · size (S/M/L) · status. Big bets are marked 🎯 and need the owner's yes.
 
 - **ContraptBench** — public benchmark of how well LLMs model real objects from a prompt, scored by
   measured geometry and sim results. Gives the project a reason to be cited and a way to measure our own
@@ -146,13 +160,13 @@ Each: *why it matters* · size (S/M/L) · status. Big bets are marked 🎯 and n
 
 ## Risks and how we handle them
 
-| Risk | Plan |
-|---|---|
-| "Every feature of Inventor" is unbounded | Phased milestones; each ships usable; ledger tracks the long tail |
-| Simulation looks authoritative but is wrong | Validation suite in CI; results print assumptions and limits |
-| 3D FEA is hard (no existing WASM solver) | Beam solver first; tetrahedral second; optional external-solver bridge as fallback |
-| Rapier may handle closed linkages poorly | Benchmark before committing; custom multibody solver as plan B |
-| Kernel wasm is large (~23 MB) | Within budget; lazy-load; revisit smaller builds later |
-| Naming/trademark | Original name; referential use only; non-affiliation notice |
-| Scope creep from the Sandbox | Exact vs approximate geometry is always labelled; sim trusts only exact |
-| Public repo leaking personal info | Standing rule + pre-commit scan; noreply git identity |
+| Risk                                        | Plan                                                                               |
+| ------------------------------------------- | ---------------------------------------------------------------------------------- |
+| "Every feature of Inventor" is unbounded    | Phased milestones; each ships usable; ledger tracks the long tail                  |
+| Simulation looks authoritative but is wrong | Validation suite in CI; results print assumptions and limits                       |
+| 3D FEA is hard (no existing WASM solver)    | Beam solver first; tetrahedral second; optional external-solver bridge as fallback |
+| Rapier may handle closed linkages poorly    | Benchmark before committing; custom multibody solver as plan B                     |
+| Kernel wasm is large (~23 MB)               | Within budget; lazy-load; revisit smaller builds later                             |
+| Naming/trademark                            | Original name; referential use only; non-affiliation notice                        |
+| Scope creep from the Sandbox                | Exact vs approximate geometry is always labelled; sim trusts only exact            |
+| Public repo leaking personal info           | Standing rule + pre-commit scan; noreply git identity                              |
