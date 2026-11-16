@@ -14,3 +14,12 @@
 2026-11-16T02:11:24Z	Edit	docs/EDITLOG.md
 2026-11-16T02:11:24Z	Edit	docs/FEATURES.md
 2026-11-16T02:11:24Z	Write	.gitattributes
+# logged by hand (hook not active in this session)
+2026-11-16T02:13:35Z	Write	package.json
+2026-11-16T02:13:35Z	Write	packages/core/package.json
+2026-11-16T02:13:35Z	Write	packages/core/test/kernel-smoke.test.js
+2026-11-16T02:13:35Z	Write	packages/core/src/kernel.js
+2026-11-16T02:13:36Z	Edit	packages/core/test/kernel-smoke.test.js
+2026-11-16T02:13:36Z	Edit	docs/DESIGN.md
+2026-11-16T02:13:36Z	Edit	docs/FEATURES.md
+2026-11-16T02:13:36Z	Edit	docs/EDITLOG.md

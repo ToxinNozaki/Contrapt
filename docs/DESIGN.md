@@ -2,10 +2,13 @@
 
 > **Where we left off** (update this at every stop)
 > - **Date:** 2026-11-15
-> - **Phase:** P0 foundations — repo, docs, logging hook created; kernel not yet integrated.
-> - **Last thing done:** project folder + orientation docs + feature ledger written.
-> - **Next up:** scaffold the npm-workspaces monorepo, prove the kernel in Node
->   (sketch → extrude → fillet → measure → STEP export), then the MCP server skeleton.
+> - **Phase:** P0 foundations — nearly done. Public repo live, docs + logging in place, **kernel proven**.
+> - **Last thing done:** kernel smoke test passes (8/8): replicad + OpenCASCADE run headless in Node;
+>   exact analytic volumes for extrude/cylinder/cut/fillet; shell; STEP export valid; init ~130 ms;
+>   extrude+fillet rebuild ~10 ms. `packages/core/src/kernel.js` isolates kernel stdout (MCP-safe).
+> - **Next up:** (1) TypeScript + lint + CI scaffold; (2) the document model: a text-based, diffable
+>   part description + parameters + feature timeline in `core`; (3) MCP server skeleton exposing
+>   create-sketch / extrude / fillet / measure / export_step; (4) minimal viewer.
 > - **Open decisions:** none blocking. See "Open questions" at the bottom.
 
 ## What this is
@@ -68,7 +71,10 @@ results report their assumptions and limits.
   solver), `sim` (FEA + dynamics), `mcp` (server), `viewer` (browser), `cli`.
 - **Geometry kernel:** OpenCASCADE via WebAssembly (exact B-rep, STEP). Candidates evaluated:
   `replicad` (+ `replicad-opencascadejs`, 48 MB unpacked), `brepjs`, `occt-wasm` (22 MB unpacked).
-  Final pick is made by a Node smoke test (extrude/fillet/shell/STEP) — decision logged in EDITLOG.
+  **Decided 2026-11-15: `replicad` 1.2.1 + `replicad-opencascadejs` 1.2.1** (MIT / LGPL-2.1) after the Node
+  smoke test passed (see `packages/core/test/kernel-smoke.test.js`). Wasm is ~23 MB unpacked, well inside
+  the budget. Gotcha found: OpenCASCADE prints to stdout, which would corrupt MCP stdio — `kernel.js`
+  routes all kernel output away from stdout. `brepjs`/`occt-wasm` remain fallback options.
 - **Sketch constraints:** `@salusoft89/planegcs` (FreeCAD's solver in WASM, <1 MB).
 - **Statics:** own lightweight solver — beam elements first, then 3D tetrahedral — validated
   against analytic cases. No known CalculiX/Elmer WASM port exists, so this is built, not borrowed.
@@ -90,7 +96,6 @@ Every tool returns structured results plus a short human-readable summary.
 
 ## Open questions
 
-- Final kernel package (see Architecture) — decided by smoke test.
 - Licence: MIT planned for Contrapt code; LGPL components (OpenCASCADE, planegcs) used unmodified
   and credited in NOTICE.md.
 - Whether to mirror this doc to a Claude Docs doc like the StuntRush project does (not yet done).

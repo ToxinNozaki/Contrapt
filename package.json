@@ -1,0 +1,14 @@
+{
+  "name": "contrapt-monorepo",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Open-source, AI-drivable parametric CAD + simulator with a built-in MCP server.",
+  "license": "MIT",
+  "type": "module",
+  "workspaces": ["packages/*"],
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present"
+  }
+}

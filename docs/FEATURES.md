@@ -6,10 +6,11 @@ Status: `[ ]` planned · `[~]` in progress · `[x]` done · `[-]` dropped (say w
 ## P0 — Foundations
 - [x] Repo folder, git, orientation docs (CLAUDE.md, DESIGN.md, FEATURES.md, EDITLOG.md) — 2026-11-15
 - [x] Edit-log hook script + local settings example — 2026-11-15
-- [ ] npm-workspaces monorepo scaffold, TypeScript, lint, test runner
+- [~] npm-workspaces monorepo scaffold — workspaces + `core` package + node:test runner done; TypeScript and lint still to do
 - [x] LICENSE (MIT), NOTICE, README stub — 2026-11-15
 - [~] GitHub repo (public), description, topics — CONTRIBUTING and CI still to do
-- [ ] Kernel smoke test in Node (extrude, fillet, shell, STEP) and kernel pick
+- [x] Kernel smoke test in Node (extrude, fillet, shell, STEP) and kernel pick — replicad + OCCT, 2026-11-15
+- [x] Kernel stdout isolation so the MCP stdio channel can't be corrupted — 2026-11-15
 
 ## P1 — Sketch and part modeling
 - [ ] Sketch entities: line, arc, circle, rectangle, polygon, ellipse, slot, spline, point

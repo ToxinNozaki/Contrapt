@@ -28,5 +28,17 @@ so nothing is lost even if a bullet here is missed. Repo-relative paths only (th
   backfill time, flagged in the file header).
 - Added `LICENSE` (MIT, "Contrapt contributors"), `NOTICE.md` (LGPL components + non-affiliation),
   `README.md` stub.
+- Created public repo (description + 20 topics), pushed first commit `3880a16`.
+- Saved a project memory entry so a fresh session finds this project and the logging rules.
+- Scaffolded npm workspaces (`package.json`, `packages/core/package.json`) and installed
+  `replicad` + `replicad-opencascadejs` (both 1.2.1). Wrote `packages/core/test/kernel-smoke.test.js`:
+  8 tests with closed-form checks (box volume/area, cylinder, hole cut, fillet, shell, STEP, timing).
+  Result: all pass; kernel init ~130 ms, extrude+fillet rebuild ~10 ms, wasm ~23 MB unpacked.
+  **Decision: replicad + OpenCASCADE is the kernel.**
+- Found that OpenCASCADE writes "Statistics on Transfer" to stdout during STEP export — that would
+  corrupt an MCP stdio stream. Probed an init-time `print`/`printErr` override (0 bytes reach stdout),
+  then wrote `packages/core/src/kernel.js` (`initKernel`, `kernelDiagnostics`) and pointed the test at it.
+- Confirmed the edit-log hook does not fire in the session that created the repo (it loads only for
+  sessions started inside the repo); edits since the hook was written are logged by hand.
 - Privacy: the machine's global git email is a personal address, so this repo's *local* git config uses
   the GitHub noreply address; commits must never carry the personal one.
