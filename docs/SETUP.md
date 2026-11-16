@@ -116,11 +116,22 @@ geometry reading is planned. Files are only read from that folder, by plain name
 
 ### Optional: convert native CAD files with an external converter
 
-If you install the open-source [cadmpeg](https://github.com/cadmpeg/cadmpeg) command-line converter yourself, start Contrapt
+Install the open-source [cadmpeg](https://github.com/cadmpeg/cadmpeg) command-line converter yourself (it is Rust; the
+first build downloads the Rust version the project pins and takes roughly 10 minutes; the program is about 80 MB):
+
+```bash
+git clone https://github.com/cadmpeg/cadmpeg.git
+cd cadmpeg
+cargo build --release --locked -p cadmpeg --no-default-features --features inventor,step
+# the program is now target/release/cadmpeg  (cadmpeg.exe on Windows)
+```
+
+Then start Contrapt
 with `--cadmpeg <path to cadmpeg>` (or set `CONTRAPT_CADMPEG`) and the AI can call `convert_file` on a file in the imports
 folder (Inventor `.ipt`/`.iam`, Fusion, SolidWorks, ...). It writes `<name>.converted.step`, which `import_file` then reads. Only
 you choose which program runs; the AI cannot pass options, and it only touches files in the imports folder. Support for
-newer file versions varies: always check the imported size with `measure`.
+newer file versions varies: always check the imported size with `measure`. Verified so far on one real Inventor 2026.4 part (the
+geometry converts and imports exactly; sketches, features and history are not transferred).
 
 ## 5. Tools at a glance
 

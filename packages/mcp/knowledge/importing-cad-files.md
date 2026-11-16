@@ -48,7 +48,7 @@ summary: What Contrapt can read today (STEP), how to get Inventor/SolidWorks/Fus
 ## Converters that may read the geometry (status)
 An open-source command-line project (cadmpeg) advertises Inventor part/assembly decoding and STEP output, with a
 published support envelope (specific container/schema versions; read-only; no feature history; assemblies and design
-intent only partly). Whether a given recent file falls inside that envelope is only known by trying it. Treat any
+intent only partly). It has been verified on a real Inventor 2026.4 part (geometry decoded and imported exactly; sketches, features and history were not transferred), but coverage varies by file version, so it is only known by trying. Treat any
 such converter as optional and external: results must be checked with `measure` against known dimensions.
 
 If the user has enabled a converter, `convert_file {file}` writes `<name>.converted.step` next to the original; then

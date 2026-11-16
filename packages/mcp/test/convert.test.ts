@@ -1,7 +1,7 @@
 // convert_file: runs an external converter safely. A stand-in "converter" script plays the role of cadmpeg so
 // these tests need no Rust and never run third-party code.
 import assert from 'node:assert/strict';
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, before, test } from 'node:test';
@@ -135,5 +135,39 @@ test('only convertible extensions, plain names, and existing files', async () =>
     const r = await call(configured, 'convert_file', { file: evil });
     assert.equal(r.isError, true, `accepted "${evil}"`);
     assert.doesNotMatch(text(r), /converted ok/);
+  }
+});
+
+// Optional regression harness for the real thing. Never runs in CI and needs no private files in the repo:
+//   CONTRAPT_SAMPLE_IPT=/path/to/part.ipt CONTRAPT_CADMPEG=/path/to/cadmpeg npm test -w @contrapt/mcp
+const sample = process.env.CONTRAPT_SAMPLE_IPT;
+const realConverter = process.env.CONTRAPT_CADMPEG;
+test('REAL: cadmpeg converts a real Inventor part and Contrapt imports it as an exact solid', {
+  skip: !(sample && realConverter),
+}, async () => {
+  const real = await mkdtemp(join(tmpdir(), 'contrapt-real-'));
+  try {
+    await mkdir(join(real, 'imports'), { recursive: true });
+    await copyFile(sample as string, join(real, 'imports', 'real part.ipt'));
+    const session = new Session('real', { importsDir: join(real, 'imports') });
+    const server = createMcpServer({
+      session,
+      outDir: real,
+      viewerUrl: () => undefined,
+      converters: { cadmpeg: { command: realConverter as string } },
+    });
+    const [a, b] = InMemoryTransport.createLinkedPair();
+    const client = new Client({ name: 'real', version: '0' });
+    await Promise.all([server.connect(a), client.connect(b)]);
+
+    const c = await call(client, 'convert_file', { file: 'real part.ipt' });
+    assert.ok(!c.isError, text(c));
+    const imp = json(await call(client, 'import_file', { file: json(c).converted, id: 'part' }));
+    assert.equal(imp.ok, true, JSON.stringify(imp));
+    assert.ok(imp.bodies.part.volume_mm3 > 0, 'imported body should have volume');
+    assert.ok(imp.bodies.part.bbox_size_mm.every((n: number) => n > 0));
+    await client.close();
+  } finally {
+    await rm(real, { recursive: true, force: true });
   }
 });
