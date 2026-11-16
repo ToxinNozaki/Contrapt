@@ -13,7 +13,7 @@
 > - **Next up:** finish M2 (verify in real Claude Desktop/Code/LM Studio, `npx` build, HTTP transport), then M3 sketch/part depth. Earlier plan: (1) [done]; (2) [done] timeline/document model in `core`
 >   (JSON schema, rebuild engine, parameters); (3) MCP server skeleton exposing
 >   create-sketch / extrude / fillet / measure / export_step plus `run_script`; (4) minimal live viewer.
-> - **Also done:** engineering knowledge packs (18) + playbooks (9 advanced prompts) via MCP prompts/resources/tools;
+> - **Also done:** engineering knowledge packs (18) + playbooks (10 advanced prompts) via MCP prompts/resources/tools;
 >   STEP import as a timeline step + format detection for ~25 CAD formats (Inventor .ipt/.iam/.idw explained, STEP route).
 >   95 tests pass; real Claude Code connects (`claude mcp list`).
 > - **Roadmap:** see [ROADMAP.md](ROADMAP.md) (milestones M0–M12, Ideas Review process). Owner wants

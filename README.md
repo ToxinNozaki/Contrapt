@@ -26,7 +26,7 @@ claude mcp add contrapt -- node /path/to/Contrapt/packages/mcp/src/cli.ts
 booleans, transforms) with named parameters and expressions; build either by tool calls or by script; a
 per-step build report with measured volume, size and centre of mass after every change; STEP and STL
 export; save/load; a live 3D viewer with dimension callouts; STEP import (and clear guidance for Inventor and other CAD files);
-**18 engineering knowledge packs and 9 expert playbooks** (design a part, review a design, strength check, size a mechanism,
+**18 engineering knowledge packs and 10 expert playbooks** (design a part, review a design, strength check, size a mechanism,
 and more) so an AI works like a design engineer, not just a modeller.
 
 Contrapt is a lightweight parametric 3D CAD app with a built-in

@@ -26,7 +26,18 @@ export function createMcpServer(ctx: ToolContext): McpServer {
       },
       async (args: Record<string, unknown>) => {
         try {
-          return { content: [{ type: 'text' as const, text: await t.run(args, ctx) }] };
+          const out = await t.run(args, ctx);
+          if (typeof out === 'string') return { content: [{ type: 'text' as const, text: out }] };
+          return {
+            content: [
+              { type: 'text' as const, text: out.text },
+              ...(out.images ?? []).map((im) => ({
+                type: 'image' as const,
+                data: im.data,
+                mimeType: im.mimeType,
+              })),
+            ],
+          };
         } catch (e) {
           return {
             isError: true,

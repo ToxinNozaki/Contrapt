@@ -37,6 +37,20 @@ summary: What Contrapt can read today (STEP), how to get Inventor/SolidWorks/Fus
 - **iLogic rules, iProperties, features history:** not in a STEP file. If the user needs the original parametric
   history, it stays in Inventor; you can rebuild the key dimensions as Contrapt parameters from their description.
 
+## What `inspect_file` reads from an Inventor file today (no Inventor needed)
+- The Inventor version that saved it (for example "2026.4"), part number, material name, author/title if set, and the
+  container facts (how many data segments it holds).
+- The **embedded preview image** (a PNG, often 512×512), returned as a real image so you can look at it, and saved
+  under `previews/`. This is one isometric view: it has no dimensions and hides back faces and internal features.
+- It does **not** read the geometry. If asked for dimensions or features, say so; do not estimate them from the picture
+  as if they were measured. Use the `recreate_from_reference` playbook to rebuild approximately, labelled as approximate.
+
+## Converters that may read the geometry (status)
+An open-source command-line project (cadmpeg) advertises Inventor part/assembly decoding and STEP output, with a
+published support envelope (specific container/schema versions; read-only; no feature history; assemblies and design
+intent only partly). Whether a given recent file falls inside that envelope is only known by trying it. Treat any
+such converter as optional and external: results must be checked with `measure` against known dimensions.
+
 ## Other programs (all via STEP)
 SolidWorks (.sldprt/.sldasm), Fusion (.f3d), CATIA, NX/Creo (.prt), Rhino (.3dm), FreeCAD (.fcstd): export STEP.
 Meshes (STL, OBJ, 3MF, glTF, SketchUp, Blender) have no exact faces: they are approximate, and a mesh importer

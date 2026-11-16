@@ -122,6 +122,40 @@ export const PLAYBOOKS: Playbook[] = [
       `${PREAMBLE}\n\n## Task\nInvent solutions for: ${a.problem ?? '(describe the problem)'}\n\n1. Clarify the real need behind it (who, where, how often, what failure looks like). Ask at most 2-3 questions.\n2. Propose 3 genuinely different concepts (different working principles, not variations). One line each, with the key mechanism.\n3. Compare them in a table on: function, complexity, cost, ease of building, risk, and size. Make a recommendation and say why.\n4. For the chosen concept: first-order numbers (loads, torque, power, size), a parts list, the riskiest assumption, and a cheap test to prove it.\n5. Then build the first model of it in Contrapt and verify it. Offer an improved version 2 idea.\n\n${pack('engineering-method')}\n\n${pack('mechanisms-and-motion')}\n\n${pack('materials')}`,
   },
   {
+    name: 'recreate_from_reference',
+    title: 'Recreate a part from a reference file or image',
+    description:
+      'Rebuild a part you cannot import directly (for example an Inventor .ipt) from its preview image and the dimensions you gather, then compare and state how faithful it is.',
+    args: {
+      file: z
+        .string()
+        .optional()
+        .describe('A file in the imports folder to inspect (its preview is shown)'),
+      notes: z
+        .string()
+        .optional()
+        .describe('Anything the user already knows: size, thickness, hole sizes'),
+    },
+    build: (a) =>
+      `${PREAMBLE}
+
+## Task
+Recreate a part from a reference. File: ${a.file ?? '(none: ask what to recreate)'}. Known details: ${a.notes ?? 'none yet'}.
+
+1. If a file is given, call inspect_file on it and LOOK at the preview image and the properties (application, part number, material). If it is a STEP, import_file it instead and skip the rest: that is exact.
+2. Be explicit about what a preview can and cannot tell you: it is one angle, with no dimensions, no hidden features, and no exact proportions. List what you can infer and what you are guessing.
+3. Ask for the few measurements that matter most (overall size, thickness, hole/pocket sizes, any known standard parts), at most 3 questions. Offer the user the exact route as well: export STEP from the original program.
+4. Build the model with parameters for every guessed dimension so it is easy to correct. Use loops in a script for repeated features (pockets, hole patterns).
+5. Compare with the reference: count features, check proportions against the picture, and measure the result. Show the viewer link.
+6. Finish with a fidelity statement: what matches, what is estimated, what is unknown, and the quickest way to make it exact (STEP export).
+
+${pack('importing-cad-files')}
+
+${pack('contrapt-modeling-patterns')}
+
+${pack('engineering-method')}`,
+  },
+  {
     name: 'explain_design',
     title: 'Explain the design (teaching mode)',
     description:

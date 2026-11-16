@@ -102,7 +102,9 @@ Status: `[ ]` planned · `[~]` in progress · `[x]` done · `[-]` dropped (say w
 - [ ] IGES — stretch
 
 - [x] Format detection and plain-language guidance for ~25 CAD formats (Inventor .ipt/.iam/.idw/.ipn, SolidWorks, Fusion, CATIA, NX/Creo, Rhino, FreeCAD, Parasolid, ACIS, DWG/DXF, meshes) — 2026-11-15
-- [ ] Inventor .ipt/.iam direct reading: evaluate the open-source read-only codec (cadmpeg-codec-inventor, Rust, early) as an experimental reader, and InventorLoader (parts only) as a reference — requested 2026-11-15
+- [x] Inventor .ipt/.iam/.idw/.ipn native inspection, no Inventor needed: Inventor version, part number, material, author, container facts, and the embedded preview image (returned to the AI as an MCP image and saved under previews/). Defensive parser (fuzzed with truncated/corrupt input). Verified on a real Inventor 2026.4 part — 2026-11-15
+- [ ] Inventor geometry via the open-source cadmpeg CLI (`cadmpeg convert part.ipt -o part.step`): findings 2026-11-15 — Rust, Apache-2.0, Inventor support at "L3" = connected B-rep from the part-kernel (ACIS) carrier, read-only; declared envelope CFB v3 + RSe schema 31 + Meta Stream v8 (verified ACIS majors 217/218); partial assemblies/materials/design intent; no feature history; nobody can say if a given 2026 file is inside the envelope without running it. NEXT: build it in an isolated scratch folder (needs the owner's OK) and try the sample; if it works, wrap it as an optional external `convert_file` tool (allow-listed args, files only from the imports folder).
+- [ ] `convert_file` tool: optional external converters (cadmpeg, others) with an allow-list, never shelling out with AI-supplied arguments — added 2026-11-15
 - [ ] Inventor bridge A: drive a locally installed Inventor (Windows automation / Apprentice) to export STEP from .ipt/.iam and DXF/DWG/PDF from .idw — requested 2026-11-15
 - [ ] Inventor bridge B: Autodesk Platform Services Model Derivative adapter (IPT/IAM to STEP/OBJ/STL/IGES; user supplies their own credentials; .idw only converts to viewer formats there) — requested 2026-11-15
 - [ ] .idw drawings: import as 2D reference (via DXF/PDF), pull dimensions and notes where possible — requested 2026-11-15
@@ -110,6 +112,10 @@ Status: `[ ]` planned · `[~]` in progress · `[x]` done · `[-]` dropped (say w
 - [ ] STEP assembly structure kept (separate parts, names, colours) instead of one compound body — 2026-11-15
 - [ ] STEP unit detection with warnings; imported-body validity/healing checks — 2026-11-15
 - [ ] Native readers for SolidWorks/Fusion/CATIA/NX/Creo (all proprietary; STEP route for now) — 2026-11-15
+
+- [x] Tool results can carry images (MCP image blocks), so clients that can see images get previews — 2026-11-15
+- [ ] `render_view` tool: a headless render of the current model as an image so the AI can SEE its own work and compare it with a reference (highest-value next step for the Proof Loop; a Chromium is pre-installable via Playwright) — added 2026-11-15
+- [x] Playbook `recreate_from_reference`: rebuild a part from a preview/reference with a fidelity statement — 2026-11-15
 
 ## P8 — Viewer
 
@@ -150,7 +156,7 @@ Status: `[ ]` planned · `[~]` in progress · `[x]` done · `[-]` dropped (say w
 ## P12 — Engineering knowledge and advanced prompts (added 2026-11-15)
 - [x] Knowledge-pack system: markdown packs with front matter, loader, tools (list_knowledge/get_knowledge), MCP resources — 2026-11-15
 - [x] 18 packs: engineering method, safety and ethics, strength and stiffness, materials, fasteners and joints, tolerances and fits, 3D printing, CNC and laser, sheet metal, molding and casting, mechanisms, motors and electronics, thermal and fluids, structures and frames, robotics and controls, failure modes, importing CAD files, Contrapt modelling patterns — 2026-11-15
-- [x] 9 playbooks (advanced prompts): engineer, design_part, design_review, design_for_process, strength_check, size_mechanism, brainstorm_invention, explain_design, build_pack; as MCP prompts and as the get_playbook tool — 2026-11-15
+- [x] 10 playbooks (advanced prompts): engineer, design_part, design_review, design_for_process, strength_check, size_mechanism, brainstorm_invention, recreate_from_reference, explain_design, build_pack; as MCP prompts and as the get_playbook tool — 2026-11-15
 - [x] Tests recompute every worked example in the packs, check links/front matter, and block personal info — 2026-11-15
 - [ ] Expand packs: gears in depth, welding design, springs, bearings selection, vibration and acoustics, composites, electronics enclosures/EMC, woodworking joinery, CNC fixturing, cost estimating, ergonomics, fluid power circuits — see knowledge/README.md
 - [ ] Citations for every number in the packs, plus an expert-review pass (invite engineers via GitHub) — added 2026-11-15

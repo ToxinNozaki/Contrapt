@@ -1,11 +1,18 @@
 // End-to-end over the MCP protocol: knowledge tools, playbooks (as tools and as MCP prompts),
 // knowledge resources, and importing files from other CAD programs.
 import assert from 'node:assert/strict';
+import { existsSync } from 'node:fs';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, before, test } from 'node:test';
-import { buildModel, exportStep, initKernel, ModelBuilder } from '@contrapt/core';
+import {
+  buildModel,
+  exportStep,
+  initKernel,
+  ModelBuilder,
+  makeInventorLikeFixture,
+} from '@contrapt/core';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { createMcpServer } from '../src/server.ts';
@@ -74,6 +81,7 @@ test('get_playbook lists playbooks, and returns self-contained instructions', as
     'strength_check',
     'size_mechanism',
     'build_pack',
+    'recreate_from_reference',
   ]) {
     assert.ok(names.includes(n), n);
   }
@@ -218,4 +226,45 @@ test('a saved model with an import reloads, and fails loudly if the file changes
   assert.equal(again.ok, false);
   assert.match(again.error.message, /checksum mismatch/);
   await writeFile(join(importsDir, 'Mount Block.step'), original); // restore
+});
+
+test('inspect_file reads an Inventor part: properties, a preview image the AI can see, honest notes', async () => {
+  await writeFile(
+    join(importsDir, 'Fixture Part.ipt'),
+    makeInventorLikeFixture({ partNumber: 'BRK-7', material: 'Steel', author: 'Pat' }),
+  );
+  const r = await call('inspect_file', { file: 'Fixture Part.ipt' });
+  assert.ok(!r.isError, text(r));
+  const data = JSON.parse(text(r));
+  assert.equal(data.support, 'via-step');
+  assert.equal(data.inventor.partNumber, 'BRK-7');
+  assert.equal(data.inventor.material, 'Steel');
+  assert.equal(data.inventor.application, '2026.4 (Build 304435000, 435)');
+  assert.equal(data.inventor.container.rseDataSegments, 3);
+  assert.equal(data.inventor.preview.format, 'png');
+  assert.equal(data.inventor.preview.file, 'previews/Fixture Part.ipt.preview.png');
+  assert.ok(data.inventor.notes.some((n: string) => /Geometry is not read natively/.test(n)));
+
+  // the reply carries the preview as a real MCP image block, so multimodal clients can look at it
+  const img = (r.content as { type: string; mimeType?: string; data?: string }[]).find(
+    (c) => c.type === 'image',
+  );
+  assert.ok(img, 'expected an image content block');
+  assert.equal(img.mimeType, 'image/png');
+  assert.equal(
+    Buffer.from(img.data ?? '', 'base64')
+      .subarray(1, 4)
+      .toString(),
+    'PNG',
+  );
+  assert.ok(existsSync(join(outDir, 'previews', 'Fixture Part.ipt.preview.png')));
+});
+
+test('a damaged Inventor file is reported honestly instead of crashing', async () => {
+  const r = await call('inspect_file', { file: 'Bracket.ipt' }); // only the 12-byte OLE magic
+  assert.ok(!r.isError, text(r));
+  const data = JSON.parse(text(r));
+  assert.equal(data.inventor.preview, null);
+  assert.ok(data.inventor.notes.some((n: string) => /Could not open the file/.test(n)));
+  assert.equal(r.content.filter((c) => c.type === 'image').length, 0);
 });

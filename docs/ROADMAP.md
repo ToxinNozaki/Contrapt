@@ -62,7 +62,7 @@ timeline and identical geometry (golden tests); editing a parameter rebuilds cor
 stdio + HTTP MCP server; browser viewer on localhost showing the AI's work live. **Done when:** from a
 clean clone, one command starts it, Claude Desktop/Claude Code connect, and "make a bracket with four
 mounting holes" appears in the viewer and exports to STEP. Includes first setup guides.
-_Status:_ server (13 tools), live viewer, and SETUP.md are built and tested (16 MCP tests, incl. a real stdio subprocess). **Also added:** 18 engineering knowledge packs and 9 playbooks (advanced prompts) as MCP prompts, resources and tools; STEP import with format detection for ~25 CAD formats. Verified in real Claude Code (`claude mcp list`: Connected). **Remaining:** Claude Desktop and LM Studio checks; publishable `npx` build; HTTP transport.
+_Status:_ server (13 tools), live viewer, and SETUP.md are built and tested (16 MCP tests, incl. a real stdio subprocess). **Also added:** 18 engineering knowledge packs and 10 playbooks (advanced prompts) as MCP prompts, resources and tools; STEP import with format detection for ~25 CAD formats. Verified in real Claude Code (`claude mcp list`: Connected). **Remaining:** Claude Desktop and LM Studio checks; publishable `npx` build; HTTP transport.
 
 ### M3 — Sketch and part depth ☐
 
@@ -163,6 +163,8 @@ Each: _why it matters_ · size (S/M/L) · status. Big bets are marked 🎯 and n
 - **Inventor file support** — read .ipt/.iam directly and treat .idw as reference. Closed formats, so the plan is
   layered: STEP today (works), then a local-Inventor bridge and an Autodesk cloud-converter adapter, then an
   experimental native reader if the open-source codec proves reliable. · L · in the ledger (P7) 🎯
+- **`render_view`: let the AI see its own model** — a headless render returned as an image, so it can compare with a
+  reference picture (like an Inventor preview) and catch mistakes the numbers miss. Pairs with `recreate_from_reference`. · M · proposed, top of M4 🎯
 - **Knowledge-pack accuracy program** — cite sources for every number and invite engineers to review packs; wrong
   confident numbers are the biggest risk of an "engineering AI". · M · proposed
 - **Ship the packs as an agent skill** — a Claude skill bundle and a ChatGPT custom-instructions file generated from the

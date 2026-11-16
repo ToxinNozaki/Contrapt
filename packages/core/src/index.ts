@@ -19,6 +19,14 @@ export {
   type StepSummary,
   sniffContent,
 } from './import.ts';
+export {
+  extractImage,
+  type InventorInfo,
+  type InventorPreview,
+  type InventorSection,
+  readInventorFile,
+} from './inventor.ts';
+export { makeInventorLikeFixture, propertySet, TINY_PNG } from './inventor-fixture.ts';
 export { initKernel, kernelDiagnostics } from './kernel.ts';
 export { type BodyInfo, describeBody } from './measure.ts';
 export { compileScript, type ScriptOptions } from './script.ts';

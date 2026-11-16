@@ -14,12 +14,18 @@ export interface ToolContext {
   viewerUrl: () => string | undefined;
 }
 
+/** A tool result with images (base64) that capable AI clients can actually look at. */
+export interface ToolResult {
+  text: string;
+  images?: { mimeType: string; data: string }[];
+}
+
 export interface ToolDef {
   name: string;
   description: string;
   input: z.ZodRawShape;
   readOnly?: boolean;
-  run: (args: Record<string, unknown>, ctx: ToolContext) => Promise<string>;
+  run: (args: Record<string, unknown>, ctx: ToolContext) => Promise<string | ToolResult>;
 }
 
 export const SafeName = z

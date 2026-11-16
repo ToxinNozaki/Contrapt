@@ -2,9 +2,9 @@
 // Files live in <out>/imports/. Tools accept plain file names only (never paths), so an AI cannot
 // read or write anywhere else on the machine.
 import { createHash } from 'node:crypto';
-import { mkdir, open, readdir, readFile, stat } from 'node:fs/promises';
+import { mkdir, open, readdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { describeStep, detectFormat, isSafeFileName } from '@contrapt/core';
+import { describeStep, detectFormat, isSafeFileName, readInventorFile } from '@contrapt/core';
 import { z } from 'zod';
 import { feedback, j, type ToolDef } from './tools.ts';
 
@@ -73,7 +73,7 @@ export const importTools: ToolDef[] = [
       }
       const bytes = await readImport(dir, a.file as string);
       const f = detectFormat(a.file as string, bytes);
-      return j({
+      const base = {
         file: a.file,
         bytes: bytes.byteLength,
         format: f.name,
@@ -81,7 +81,54 @@ export const importTools: ToolDef[] = [
         support: f.support,
         howTo: f.howTo,
         ...(f.format === 'step' && f.support === 'supported' ? { step: describeStep(bytes) } : {}),
+      };
+      if (!['ipt', 'iam', 'idw', 'ipn'].includes(f.format)) return j(base);
+
+      // Autodesk Inventor: geometry is not readable yet, but metadata and the preview image are.
+      const inv = readInventorFile(bytes);
+      let previewFile: string | undefined;
+      if (inv.preview) {
+        const previews = join(ctx.outDir, 'previews');
+        await mkdir(previews, { recursive: true });
+        previewFile = `${a.file}.preview.${inv.preview.format === 'png' ? 'png' : 'jpg'}`;
+        await writeFile(join(previews, previewFile), inv.preview.bytes);
+      }
+      const text = j({
+        ...base,
+        inventor: {
+          application: inv.summary.application,
+          partNumber: inv.summary.partNumber,
+          material: inv.summary.material,
+          author: inv.summary.author,
+          title: inv.summary.title,
+          container: {
+            cfbVersion: inv.cfbVersion,
+            streams: inv.streams,
+            rseDataSegments: inv.rseSegments,
+          },
+          preview: inv.preview
+            ? {
+                format: inv.preview.format,
+                width: inv.preview.width,
+                height: inv.preview.height,
+                file: `previews/${previewFile}`,
+              }
+            : null,
+          sections: inv.sections.map((x) => ({ name: x.name, properties: x.properties })),
+          notes: inv.notes,
+        },
       });
+      return inv.preview
+        ? {
+            text,
+            images: [
+              {
+                mimeType: inv.preview.format === 'png' ? 'image/png' : 'image/jpeg',
+                data: Buffer.from(inv.preview.bytes).toString('base64'),
+              },
+            ],
+          }
+        : text;
     },
   },
   {

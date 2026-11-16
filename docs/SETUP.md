@@ -108,8 +108,11 @@ Other playbooks: `design_for_process`, `strength_check`, `size_mechanism`, `brai
 
 Put the file in the `imports` folder inside the output folder (`contrapt-out/imports`), then ask: "Inspect and import
 `Bracket.step`." STEP files import as exact solids you can measure and edit. **Inventor files (.ipt, .iam, .idw)** are a
-closed format: Contrapt recognises them and tells the AI how to export STEP from Inventor (File > Export > CAD Format >
-STEP). Direct reading and Inventor bridges are planned. Files are only read from that folder, by plain name.
+closed format. Contrapt cannot read their geometry yet, but `inspect_file` does read, without Inventor installed, the
+Inventor version, part number and material, and the **preview image**, which a capable AI can look at. It also tells the
+AI how to export STEP from Inventor (File > Export > CAD Format > STEP) for an exact import, and the
+`recreate_from_reference` playbook rebuilds a part approximately from the preview plus a few measurements. Direct
+geometry reading is planned. Files are only read from that folder, by plain name.
 
 ## 5. Tools at a glance
 
