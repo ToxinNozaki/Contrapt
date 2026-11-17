@@ -17,6 +17,7 @@ export const STEP_OPS: StepOp[] = [
   'cylinder',
   'sphere',
   'sketch',
+  'constrained_sketch',
   'extrude',
   'revolve',
   'loft',
@@ -94,7 +95,11 @@ export class ModelBuilder {
 
   /** Early, friendly reference checks (the engine re-checks at build time). */
   private checkReferences(step: StepInput_): void {
-    const sketches = new Set(this.tl.steps.filter((s) => s.op === 'sketch').map((s) => s.id));
+    const sketches = new Set(
+      this.tl.steps
+        .filter((s) => s.op === 'sketch' || s.op === 'constrained_sketch')
+        .map((s) => s.id),
+    );
     const bodies = this.bodyIds();
     const need = (id: string | undefined, set: Set<string>, kind: string) => {
       if (id !== undefined && !set.has(id)) {

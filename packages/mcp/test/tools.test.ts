@@ -172,3 +172,58 @@ test('save, list and load round-trip the timeline', async () => {
 test('view returns the viewer link', async () => {
   assert.equal(json(await call('view')).url, 'http://localhost:0/');
 });
+
+test('constrained sketches give the AI solver feedback: degrees of freedom, conflicts, then a verified solid', async () => {
+  await call('new_model', { name: 'csk' });
+  const sketch = (constraints: object[]) => ({
+    op: 'constrained_sketch',
+    id: 'sk',
+    plane: 'XY',
+    points: { A: [1, 2], B: [35, -3], C: [38, 17], D: [-2, 22] },
+    lines: { AB: ['A', 'B'], BC: ['B', 'C'], CD: ['C', 'D'], DA: ['D', 'A'] },
+    constraints,
+    profile: [{ loop: ['AB', 'BC', 'CD', 'DA'] }],
+  });
+  const base = [
+    { type: 'fix', a: 'A', at: [0, 0] },
+    { type: 'horizontal', a: 'AB' },
+    { type: 'vertical', a: 'BC' },
+    { type: 'horizontal', a: 'CD' },
+    { type: 'vertical', a: 'DA' },
+    { type: 'distance', a: 'A', b: 'B', value: 'w' },
+  ];
+  await call('set_param', { name: 'w', value: 40 });
+
+  // 1) one dimension missing: ok, but the report says what is still free
+  const r1 = json(await call('add_step', { step: sketch(base) }));
+  assert.equal(r1.ok, true);
+  const s1 = r1.steps.find((s: { id: string }) => s.id === 'sk');
+  assert.match(s1.note, /under-constrained: 1 degree\(s\) of freedom/);
+  assert.equal(s1.data.dof, 1);
+
+  // 2) a contradicting dimension: failure that names both constraints
+  await call('remove_step', { id: 'sk' });
+  const r2 = json(
+    await call('add_step', {
+      step: sketch([...base, { type: 'distance', a: 'A', b: 'B', value: 99 }]),
+    }),
+  );
+  assert.equal(r2.ok, false);
+  assert.match(
+    r2.error.message,
+    /Conflicting constraints.*#6 distance\(A, B, w\).*#7 distance\(A, B, 99\)/,
+  );
+
+  // 3) fully dimensioned, then extruded: a verified solid that follows the parameter
+  await call('remove_step', { id: 'sk' });
+  await call('add_step', {
+    step: sketch([...base, { type: 'distance', a: 'B', b: 'C', value: 'w / 2' }]),
+  });
+  const r3 = json(
+    await call('add_step', { step: { op: 'extrude', id: 'part', sketch: 'sk', distance: 10 } }),
+  );
+  assert.equal(r3.ok, true, JSON.stringify(r3));
+  assert.equal(r3.bodies.part.volume_mm3, 40 * 20 * 10);
+  const r4 = json(await call('set_param', { name: 'w', value: 60 }));
+  assert.equal(r4.bodies.part.volume_mm3, 60 * 30 * 10);
+});

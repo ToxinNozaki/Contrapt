@@ -36,6 +36,13 @@ const steps = `# Steps (op values)
 box {w,d,h,at?}  cylinder {r,h,at?,axis?}  sphere {r,at?}
 sketch {plane, offset?, profile:[items]}  -- profile items: rect {w,h,cx?,cy?,cornerRadius?},
   circle {r,cx?,cy?}, polygon {points:[[x,y]...]}, ngon {sides,r,cx?,cy?}. Add "cut":true to subtract an item.
+constrained_sketch {plane, offset?, points:{A:[x,y],...}, lines:{AB:['A','B'],...}, circles:{c:{center:'A', r}}, constraints:[{type,a,b?,value?,at?}], profile:[{loop:[line names], cut?} | {circle:name, cut?}]}
+  -- a sketch driven by dimensions and relations instead of coordinates. Give ROUGH starting positions; the solver snaps them to
+  satisfy the constraints. Constraint types: fix (a=point, at?), x / y (a=point, value), coincident (a,b points), horizontal / vertical
+  (a=line, or a,b=points), distance (a,b points, value), parallel / perpendicular / equalLength (a,b lines), angle (a,b lines, value degrees),
+  radius / diameter (a=circle, value), equalRadius (a,b circles), onLine (a=point, b=line), onCircle (a=point, b=circle), tangent (a=line,b=circle or both circles).
+  Values may be expressions over parameters. The report says "fully constrained (0 degrees of freedom)" or how many dimensions are still free,
+  and names conflicting constraints. Pin one point with fix, give every shape a size, and aim for 0 degrees of freedom.
 extrude {sketch, distance, symmetric?, mode?: new|add|cut, target?}  -- add/cut modify \`target\` in place
 revolve {sketch, axis: X|Y|Z, origin?, angle? (degrees, default 360), mode?, target?}  -- spins the sketch profile about a WORLD axis; keep the profile on one side of the axis (turned parts: sketch on XZ, axis Z)
 loft {sketches:[id, id, ...], ruled?, mode?, target?}  -- blends through 2-12 sketches, each on its own plane/offset (e.g. round-to-square adapters, tapers, funnels, countersinks via mode cut)

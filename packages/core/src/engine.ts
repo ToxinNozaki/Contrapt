@@ -24,6 +24,7 @@ import { detectFormat } from './import.ts';
 import { initKernel } from './kernel.ts';
 import { type BodyInfo, describeBody } from './measure.ts';
 import { as3D } from './shapes.ts';
+import { loopToPolygon, solveSketch } from './sketch.ts';
 import type { EdgeSelector, FaceSelector, ProfileItem, Step, Timeline } from './timeline.ts';
 
 export interface StepReport {
@@ -31,7 +32,16 @@ export interface StepReport {
   op: string;
   status: 'ok' | 'error' | 'skipped' | 'suppressed';
   error?: string;
+  /** Plain-language remark about a successful step (for example how constrained a sketch is). */
+  note?: string;
+  /** Structured results (for example solved sketch points). */
+  data?: unknown;
   ms: number;
+}
+
+interface StepInfo {
+  note?: string;
+  data?: unknown;
 }
 
 export interface BuildReport {
@@ -192,7 +202,7 @@ function assertCount(kind: string, found: number, expect: number | undefined) {
 }
 
 // ---- step execution -----------------------------------------------------------------------------
-async function runStep(step: Step, ctx: Ctx): Promise<void> {
+async function runStep(step: Step, ctx: Ctx): Promise<StepInfo | undefined> {
   const { n } = ctx;
   const vec = (v: [Num, Num, Num] | undefined): [number, number, number] =>
     v ? [n(v[0]), n(v[1]), n(v[2])] : [0, 0, 0];
@@ -234,6 +244,65 @@ async function runStep(step: Step, ctx: Ctx): Promise<void> {
         offset: step.offset === undefined ? 0 : n(step.offset),
       });
       return;
+    }
+    case 'constrained_sketch': {
+      const num = (v: Num | undefined) => (v === undefined ? undefined : n(v));
+      const out = await solveSketch({
+        points: step.points,
+        lines: step.lines ?? {},
+        circles: step.circles ?? {},
+        constraints: step.constraints.map((c) => ({
+          type: c.type,
+          a: c.a,
+          b: c.b,
+          value: num(c.value),
+          at: c.at,
+        })),
+      });
+      const label = (i: number) => {
+        const c = step.constraints[i];
+        return c
+          ? `#${i + 1} ${c.type}(${[c.a, c.b].filter(Boolean).join(', ')}${c.value !== undefined ? `, ${c.value}` : ''})`
+          : `#${i + 1}`;
+      };
+      if (!out.ok) {
+        const which = out.conflicting.map(label).join('; ');
+        throw new Error(
+          out.conflicting.length
+            ? `Conflicting constraints: ${which}. They cannot all be true together; remove or change one.`
+            : 'The solver could not satisfy the constraints from these starting positions. Move the starting points closer to the intended shape, or relax a constraint.',
+        );
+      }
+      const items: ProfileItem[] = step.profile.map((p) => {
+        if ('loop' in p) {
+          return {
+            shape: 'polygon',
+            points: loopToPolygon(p.loop, step.lines ?? {}, out.points),
+            cut: p.cut,
+          };
+        }
+        const c = out.circles[p.circle];
+        if (!c) throw new Error(`profile uses "${p.circle}", which is not a circle`);
+        return { shape: 'circle', r: c.r, cx: c.cx, cy: c.cy, cut: p.cut };
+      });
+      ctx.sketches.set(step.id, {
+        drawing: profileDrawing(items, n),
+        plane: step.plane,
+        offset: step.offset === undefined ? 0 : n(step.offset),
+      });
+      const state =
+        out.dof === 0
+          ? 'fully constrained (0 degrees of freedom)'
+          : out.dof > 0
+            ? `under-constrained: ${out.dof} degree(s) of freedom left, so some dimensions can still move. Add dimensions or constraints to fix them`
+            : 'over-constrained';
+      const red = out.redundant.length
+        ? `; redundant (already implied, harmless): ${out.redundant.map(label).join('; ')}`
+        : '';
+      return {
+        note: `${state}${red}`,
+        data: { dof: out.dof, points: out.points, circles: out.circles },
+      };
     }
     case 'extrude': {
       const sk = ctx.sketches.get(step.sketch);
@@ -436,11 +505,13 @@ export async function buildModel(timeline: Timeline, opts: BuildOptions = {}): P
     }
     const t0 = performance.now();
     try {
-      await runStep(step, ctx);
+      const info = await runStep(step, ctx);
       reports.push({
         id: step.id,
         op: step.op,
         status: 'ok',
+        ...(info?.note ? { note: info.note } : {}),
+        ...(info?.data ? { data: info.data } : {}),
         ms: round(performance.now() - t0, 1),
       });
     } catch (e) {

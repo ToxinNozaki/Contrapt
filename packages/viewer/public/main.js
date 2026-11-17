@@ -304,6 +304,12 @@ function renderRail() {
     op.textContent = s.op;
     name.appendChild(op);
     li.append(g, name);
+    if (s.note) {
+      const p = document.createElement('p');
+      p.className = 'note';
+      p.textContent = s.note;
+      li.appendChild(p);
+    }
     if (s.error) {
       const p = document.createElement('p');
       p.className = 'msg';

@@ -66,6 +66,8 @@ export function feedback(ctx: ToolContext, headline: string): string {
             op: s.op,
             status: s.status,
             ...(s.error ? { error: s.error } : {}),
+            ...(s.note ? { note: s.note } : {}),
+            ...(s.data ? { data: s.data } : {}),
           }))
         : `${steps.filter((s) => s.status === 'ok').length}/${steps.length} ok (use get_model for details)`,
     params: report.params,
@@ -106,7 +108,7 @@ const tools: ToolDef[] = [
   {
     name: 'add_step',
     description:
-      'Append one step to the timeline (box, cylinder, sphere, sketch, extrude, fillet, chamfer, shell, boolean, transform). Returns the new id and the rebuilt, measured result. See get_docs topic "steps".',
+      'Append one step to the timeline (box, cylinder, sphere, sketch, constrained_sketch, extrude, revolve, loft, fillet, chamfer, shell, boolean, transform, import). Returns the new id and the rebuilt, measured result. See get_docs topic "steps".',
     input: { step: StepInput },
     run: async (a, ctx) => {
       const id = ctx.session.builder.add(a.step);

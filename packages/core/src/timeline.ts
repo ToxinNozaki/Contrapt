@@ -5,6 +5,7 @@
 // Any numeric field may be a number or an expression string that references parameters.
 import { z } from 'zod';
 import { isSafeFileName } from './import.ts';
+import { CONSTRAINT_TYPES } from './sketch.ts';
 
 export const TIMELINE_VERSION = 1;
 
@@ -99,7 +100,53 @@ const FileName = z
     'plain file name only (letters, digits, space, _ . ( ) + -); no folders or ".."',
   );
 
+const EntityName = z
+  .string()
+  .regex(/^[A-Za-z][A-Za-z0-9_]*$/, 'names start with a letter; letters, digits and _ only');
+
+const ConstraintSpec = z.object({
+  type: z.enum(CONSTRAINT_TYPES),
+  a: EntityName.describe('first point/line/circle the constraint is about'),
+  b: EntityName.optional().describe('second one, when the constraint relates two things'),
+  value: Num.optional().describe(
+    'a dimension (mm, degrees for angle); may be an expression over parameters',
+  ),
+  at: z
+    .tuple([z.number(), z.number()])
+    .optional()
+    .describe('fix: pin the point here instead of where it is'),
+});
+
 export const StepInput = z.discriminatedUnion('op', [
+  z.object({
+    ...base,
+    op: z.literal('constrained_sketch'),
+    plane: PlaneName,
+    offset: Num.optional(),
+    points: z
+      .record(EntityName, z.tuple([z.number(), z.number()]))
+      .describe('named points with rough starting positions [x, y]'),
+    lines: z
+      .record(EntityName, z.tuple([EntityName, EntityName]))
+      .optional()
+      .describe('named lines between two points'),
+    circles: z
+      .record(EntityName, z.object({ center: EntityName, r: z.number().positive() }))
+      .optional()
+      .describe('named circles: center point and a starting radius'),
+    constraints: z.array(ConstraintSpec),
+    profile: z
+      .array(
+        z.union([
+          z.object({ loop: z.array(EntityName).min(3), cut: z.boolean().optional() }),
+          z.object({ circle: EntityName, cut: z.boolean().optional() }),
+        ]),
+      )
+      .min(1)
+      .describe(
+        'what becomes solid: closed loops of line names and/or circle names; cut:true subtracts',
+      ),
+  }),
   z.object({
     ...base,
     op: z.literal('import'),

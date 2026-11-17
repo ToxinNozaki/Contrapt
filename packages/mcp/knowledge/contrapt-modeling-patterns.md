@@ -11,6 +11,18 @@ when a feature is not available yet*, so you do not invent tools that do not exi
 A STEP file from another CAD program can be imported (`inspect_file`, then `import_file`) and built on with cuts,
 holes and fillets. Native Inventor/SolidWorks files must be exported to STEP first. See `importing-cad-files`.
 
+## Constrained sketches (design intent, not coordinates)
+Use `constrained_sketch` when dimensions matter or may change: describe named points with ROUGH starting positions, lines between them,
+and constraints (horizontal, vertical, distance, parallel, perpendicular, equalLength, angle, radius, diameter, tangent, onLine, ...).
+The solver moves the points to satisfy them. Workflow that works:
+1. Place the points roughly where the shape should be (it only needs to be about right, not exact).
+2. Pin ONE point with `fix`, add horizontal/vertical/parallel/perpendicular relations, then dimension every size.
+3. Read the step note: **"fully constrained (0 degrees of freedom)"** is the goal. "Under-constrained: N degree(s) left" means N
+   dimensions can still move: add them. A **conflict** names the contradicting constraints: remove or change one.
+4. Use parameters in `value` (for example `"width/2"`) so changing one number re-solves the whole sketch.
+Solved point positions are returned in the step data, so you can check them against your hand numbers. Keep points near the intended
+solution: a very wrong starting layout can converge to a mirrored or twisted shape.
+
 ## Good habits
 - **Parameters first.** `set_param` every key dimension (`thickness`, `hole_d`, `pitch`), then reference them as
   strings: `"hole_d/2"`. Change one number later and the model rebuilds.
@@ -44,7 +56,7 @@ the assembly, then `measure` each body and check clearances by comparing boundin
 Mirror or symmetric parts: `symmetric: true` on extrude, or compute mirrored positions in a script loop (there is no copy/mirror step yet, and `transform` moves a body, it does not duplicate it).
 
 ## What does not exist yet (do not pretend it does)
-- Constrained sketches (dimensions/constraints solved automatically), arcs and splines in sketches.
+- Arcs and splines in sketches (constrained sketches support lines and circles; arcs are planned).
 - Sweep, draft, thread features, ribs, patterns/mirror as one-click features.
 - Assemblies with joints and mates; motion studies.
 - Stress/modal/thermal simulation; interference checks and wall-thickness analysis (coming in later milestones).

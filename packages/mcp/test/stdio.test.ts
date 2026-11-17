@@ -45,3 +45,50 @@ test('stdio server: build, export STEP, and the protocol survives kernel output'
     await rm(out, { recursive: true, force: true });
   }
 });
+
+test('stdio server: a conflicting constrained sketch (solver is chatty) does not corrupt the protocol', async () => {
+  const out = await mkdtemp(join(tmpdir(), 'contrapt-stdio2-'));
+  const transport = new StdioClientTransport({
+    command: process.execPath,
+    args: [cli, '--no-viewer', '--out', out],
+  });
+  const client = new Client({ name: 'stdio-test', version: '0' });
+  try {
+    await client.connect(transport);
+    const step = (extra: object[]) => ({
+      op: 'constrained_sketch',
+      id: 'sk',
+      plane: 'XY',
+      points: { A: [1, 2], B: [35, -3], C: [38, 17], D: [-2, 22] },
+      lines: { AB: ['A', 'B'], BC: ['B', 'C'], CD: ['C', 'D'], DA: ['D', 'A'] },
+      constraints: [
+        { type: 'fix', a: 'A', at: [0, 0] },
+        { type: 'horizontal', a: 'AB' },
+        { type: 'vertical', a: 'BC' },
+        { type: 'horizontal', a: 'CD' },
+        { type: 'vertical', a: 'DA' },
+        { type: 'distance', a: 'A', b: 'B', value: 40 },
+        { type: 'distance', a: 'B', b: 'C', value: 20 },
+        ...extra,
+      ],
+      profile: [{ loop: ['AB', 'BC', 'CD', 'DA'] }],
+    });
+    const call = async (s: object) =>
+      JSON.parse(
+        (
+          (await client.callTool({ name: 'add_step', arguments: { step: s } })) as {
+            content: { text: string }[];
+          }
+        ).content[0]?.text ?? '{}',
+      );
+    const bad = await call(step([{ type: 'distance', a: 'A', b: 'B', value: 50 }]));
+    assert.equal(bad.ok, false);
+    await client.callTool({ name: 'remove_step', arguments: { id: 'sk' } });
+    const red = await call(step([{ type: 'distance', a: 'A', b: 'B', value: 40 }])); // redundant: also prints
+    assert.equal(red.ok, true);
+    assert.equal((await client.listTools()).tools.length > 10, true); // connection still healthy
+  } finally {
+    await client.close();
+    await rm(out, { recursive: true, force: true });
+  }
+});
