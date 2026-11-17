@@ -7,6 +7,9 @@ starts it also opens a **live 3D viewer** on localhost, so you can watch the mod
 > MCP client library. It has not yet been verified inside every AI app; if one misbehaves, please open an
 > issue with the app name and what you saw.
 
+> **Coming from npm?** Once published, `claude mcp add contrapt -- npx -y contrapt` is all you need (no clone). The package is built and
+> smoke-tested from a clean install on every push; publishing is the owner's step. Until then, use the clone-based setup below.
+
 ## 1. Requirements
 
 - **Node.js 22.18 or newer** (check with `node -v`). Contrapt runs TypeScript directly, so no build step is needed.

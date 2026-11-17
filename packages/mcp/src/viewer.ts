@@ -34,7 +34,9 @@ export interface ViewerOptions {
 
 function defaultPublicDir(): string {
   const here = dirname(fileURLToPath(import.meta.url));
-  return resolve(here, '..', '..', 'viewer', 'public');
+  // packaged: <package>/dist/cli.mjs with <package>/viewer; monorepo: packages/mcp/src with packages/viewer/public
+  const candidates = [resolve(here, '..', 'viewer'), resolve(here, '..', '..', 'viewer', 'public')];
+  return candidates.find((c) => existsSync(join(c, 'index.html'))) ?? (candidates[1] as string);
 }
 
 function threeDir(): string {

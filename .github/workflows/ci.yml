@@ -28,3 +28,5 @@ jobs:
         run: npm run typecheck
       - name: Tests (kernel smoke + validation suite)
         run: npm test
+      - name: Package smoke test (pack, clean install, drive over stdio)
+        run: npm run smoke:pack

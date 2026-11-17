@@ -1,0 +1,59 @@
+{
+  "name": "contrapt",
+  "version": "0.1.0",
+  "description": "Open-source, AI-drivable parametric CAD with a built-in MCP server and live 3D viewer. The AI doesn't just draw it, it proves it works.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "contrapt": "dist/cli.mjs"
+  },
+  "files": [
+    "dist",
+    "knowledge",
+    "viewer",
+    "README.md",
+    "LICENSE",
+    "NOTICE.md"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "cad",
+    "mcp",
+    "model-context-protocol",
+    "mcp-server",
+    "parametric-cad",
+    "opencascade",
+    "3d-modeling",
+    "ai-agents",
+    "claude",
+    "llm",
+    "step",
+    "mechanical-engineering"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ToxinNozaki/Contrapt.git"
+  },
+  "homepage": "https://github.com/ToxinNozaki/Contrapt#readme",
+  "bugs": {
+    "url": "https://github.com/ToxinNozaki/Contrapt/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "node build.mjs",
+    "prepack": "node build.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "@salusoft89/planegcs": "^1.3.0",
+    "cfb": "^1.2.2",
+    "replicad": "^1.2.1",
+    "replicad-opencascadejs": "^1.2.1",
+    "three": "^0.187.0",
+    "zod": "^4.6.7"
+  }
+}

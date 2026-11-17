@@ -17,3 +17,11 @@ Thumbs.db
 out/
 *.step.tmp
 .claude/launch.json
+
+# built package output
+packages/contrapt/dist/
+packages/contrapt/knowledge/
+packages/contrapt/viewer/
+packages/contrapt/LICENSE
+packages/contrapt/NOTICE.md
+*.tgz

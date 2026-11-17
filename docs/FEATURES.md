@@ -159,7 +159,7 @@ Status: `[ ]` planned · `[~]` in progress · `[x]` done · `[-]` dropped (say w
 
 - [ ] Verify the stdio server inside real Claude Desktop, Claude Code and LM Studio and record results — added 2026-11-15
 - [x] Streamable HTTP MCP transport — built 2026-11-17 (verify with ChatGPT and OAuth-style auth if required)
-- [ ] Publishable build: compile TS to dist so `npx contrapt` works (Node refuses to run .ts inside node_modules) — added 2026-11-15
+- [x] Publishable build (2026-11-17): `packages/contrapt` bundles the CLI with esbuild (153 KB; heavy deps stay external), ships the knowledge packs and viewer, `npm run smoke:pack` packs it, installs the tarball into a clean folder and drives it as a real MCP client (21 tools, OpenCASCADE + solver WASM, STEP export, render, knowledge, viewer incl. three.js); runs in CI. NOT yet published to npm (needs the owner's npm account)
 - [ ] Per-op convenience tools (add_box, add_fillet, ...) if weaker/local models struggle with the generic add_step — added 2026-11-15
 - [ ] Viewer: click a body to highlight its step, hover to read dimensions, section plane, themes toggle — added 2026-11-15
 - [ ] Live human edits in the viewer (change a parameter by dragging/typing) feeding back to the timeline — added 2026-11-15
