@@ -257,6 +257,31 @@ async function runStep(step: Step, ctx: Ctx): Promise<void> {
       }
       return;
     }
+    case 'revolve': {
+      const sk = ctx.sketches.get(step.sketch);
+      if (!sk) {
+        throw new Error(
+          `No sketch "${step.sketch}". Existing sketches: ${[...ctx.sketches.keys()].join(', ') || '(none yet)'}`,
+        );
+      }
+      const angle = step.angle === undefined ? 360 : n(step.angle);
+      if (!(angle > 0 && angle <= 360))
+        throw new Error('revolve angle must be between 0 and 360 degrees');
+      const origin = vec(step.origin);
+      const solid = as3D(
+        sk.drawing.sketchOnPlane(sk.plane as 'XY', sk.offset).revolve(step.axis, { origin, angle }),
+        'revolve',
+      );
+      const mode = step.mode ?? 'new';
+      if (mode === 'new') {
+        ctx.bodies.set(step.id, solid);
+      } else {
+        if (!step.target) throw new Error(`revolve mode "${mode}" needs a target body`);
+        const t = get(ctx, step.target);
+        ctx.bodies.set(step.target, mode === 'add' ? t.fuse(solid) : t.cut(solid));
+      }
+      return;
+    }
     case 'fillet': {
       const t = get(ctx, step.target);
       const sel = step.edges;

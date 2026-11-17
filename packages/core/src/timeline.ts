@@ -140,6 +140,18 @@ export const StepInput = z.discriminatedUnion('op', [
     mode: Mode.optional(),
     target: Id.optional(),
   }),
+  z.object({
+    ...base,
+    op: z.literal('revolve'),
+    sketch: Id,
+    axis: AxisName.describe(
+      'world axis to revolve around (the sketch profile should lie on one side of it)',
+    ),
+    origin: Vec3.optional().describe('a point the axis passes through (default: the origin)'),
+    angle: Num.optional().describe('degrees, default 360'),
+    mode: Mode.optional(),
+    target: Id.optional(),
+  }),
   z.object({ ...base, op: z.literal('fillet'), target: Id, radius: Num, edges: EdgeSelector }),
   z.object({ ...base, op: z.literal('chamfer'), target: Id, distance: Num, edges: EdgeSelector }),
   z.object({ ...base, op: z.literal('shell'), target: Id, thickness: Num, faces: FaceSelector }),

@@ -45,14 +45,14 @@ Mirror or symmetric parts: `symmetric: true` on extrude, or compute mirrored pos
 
 ## What does not exist yet (do not pretend it does)
 - Constrained sketches (dimensions/constraints solved automatically), arcs and splines in sketches.
-- Revolve, sweep, loft, draft, thread features, ribs, patterns/mirror as one-click features.
+- Sweep, loft, draft, thread features, ribs, patterns/mirror as one-click features.
 - Assemblies with joints and mates; motion studies.
 - Stress/modal/thermal simulation; interference checks and wall-thickness analysis (coming in later milestones).
 - Sheet metal flanges/bends, drawings, and any import other than STEP (see `importing-cad-files`).
 
 ## Workarounds today
-- **Revolve-like shapes (turned parts, bottles, knobs):** approximate with stacked `cylinder` and `sphere` bodies
-  joined by `boolean` union. Say it is an approximation.
+- **Turned parts, bottles, knobs, pulleys:** use `revolve`. Sketch the half profile (a `polygon` of [x, z] points) on the XZ
+  plane with one edge on the axis, then `revolve` about Z. Exact, and parametric.
 - **Arcs/rounded slots:** a `rect` with `cornerRadius`, or `circle` items combined with `rect` items.
 - **Slots:** a `rect` plus two `circle` items fused (same sketch, not `cut`) or a rounded rectangle.
 - **Interference:** add a `boolean` step with `kind: 'intersect'` between the two bodies (it consumes them in the

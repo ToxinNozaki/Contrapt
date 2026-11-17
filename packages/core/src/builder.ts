@@ -18,6 +18,7 @@ export const STEP_OPS: StepOp[] = [
   'sphere',
   'sketch',
   'extrude',
+  'revolve',
   'fillet',
   'chamfer',
   'shell',
@@ -103,6 +104,7 @@ export class ModelBuilder {
     };
     switch (step.op) {
       case 'extrude':
+      case 'revolve':
         need(step.sketch, sketches, 'sketch');
         need(step.target, bodies, 'body');
         break;
@@ -127,7 +129,8 @@ export class ModelBuilder {
       if (s.suppressed) continue;
       if (s.op === 'box' || s.op === 'cylinder' || s.op === 'sphere' || s.op === 'import')
         ids.add(s.id);
-      else if (s.op === 'extrude' && (s.mode ?? 'new') === 'new') ids.add(s.id);
+      else if ((s.op === 'extrude' || s.op === 'revolve') && (s.mode ?? 'new') === 'new')
+        ids.add(s.id);
       else if (s.op === 'boolean') {
         ids.delete(s.a);
         ids.delete(s.b);

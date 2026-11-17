@@ -22,7 +22,7 @@ Status: `[ ]` planned · `[~]` in progress · `[x]` done · `[-]` dropped (say w
 - [~] Named parameters and equations — named params + safe expression evaluator done (2026-11-15); driven/reference dimensions pending
 - [ ] Work planes, axes, points; sketch on face
 - [~] Extrude — blind, symmetric, new/add/cut done (2026-11-15); through-all and up-to pending
-- [ ] Revolve, sweep, loft, coil/spring
+- [~] Revolve done (full/partial angle, new/add/cut, world axis + origin; closed-form tested) 2026-11-17; sweep, loft, coil/spring pending
 - [~] Fillet, chamfer, shell done (2026-11-15); draft and offset face pending
 - [ ] Hole wizard (simple, counterbore, countersink, tapped), cosmetic threads
 - [ ] Rib, web, emboss/deboss
@@ -35,7 +35,7 @@ Status: `[ ]` planned · `[~]` in progress · `[x]` done · `[-]` dropped (say w
 - [ ] Richer selectors: curve type, face normals, "outer corner edges", named/saved selections (hole seam edges currently count as vertical edges) — added 2026-11-15
 - [ ] WASM memory management: explicitly free intermediate shapes in long sessions — added 2026-11-15
 - [ ] More primitives in the timeline: cone, torus, ellipsoid, wedge, text — added 2026-11-15
-- [ ] Revolve, sweep, loft as timeline ops (kernel supports them; schema/engine don't yet) — added 2026-11-15
+- [~] Revolve is a timeline op now (2026-11-17); sweep and loft still need schema/engine work — added 2026-11-15
 
 ## P2 — Query and verify (the AI's eyes)
 

@@ -298,3 +298,71 @@ test('script: validation errors surface with the same readable messages', () => 
     /Unknown sketch "ghost"/,
   );
 });
+
+test('revolve: full ring, partial angle, and cut mode match closed-form volumes', async () => {
+  const ring = (angle?: number) => {
+    const b = new ModelBuilder();
+    const s = b.add({
+      op: 'sketch',
+      plane: 'XZ',
+      profile: [{ shape: 'rect', w: 10, h: 30, cx: 15, cy: 15 }],
+    });
+    b.add({ op: 'revolve', id: 'r', sketch: s, axis: 'Z', ...(angle ? { angle } : {}) });
+    return b;
+  };
+  const full = await buildModel(ring().toJSON());
+  assert.ok(full.report.ok, JSON.stringify(full.report.steps));
+  close(full.report.bodies.r?.volume ?? 0, Math.PI * (20 ** 2 - 10 ** 2) * 30, 1e-2);
+  assert.deepEqual(full.report.bodies.r?.bbox.size, [40, 40, 30]);
+
+  const half = await buildModel(ring(180).toJSON());
+  close(half.report.bodies.r?.volume ?? 0, (Math.PI * (20 ** 2 - 10 ** 2) * 30) / 2, 1e-2);
+  const viaParam = new ModelBuilder().param('a', 90);
+  const s = viaParam.add({
+    op: 'sketch',
+    plane: 'XZ',
+    profile: [{ shape: 'rect', w: 10, h: 30, cx: 15, cy: 15 }],
+  });
+  viaParam.add({ op: 'revolve', id: 'q', sketch: s, axis: 'Z', angle: 'a' });
+  close(
+    (await buildModel(viaParam.toJSON())).report.bodies.q?.volume ?? 0,
+    (Math.PI * 300 * 30) / 4,
+    1e-2,
+  );
+
+  // cut mode: bore a hole with a revolved profile that touches the axis
+  const b = new ModelBuilder();
+  b.add({ op: 'box', id: 'blk', w: 50, d: 50, h: 30, at: [0, 0, 15] });
+  const hole = b.add({
+    op: 'sketch',
+    plane: 'XZ',
+    profile: [{ shape: 'rect', w: 10, h: 30, cx: 5, cy: 15 }],
+  });
+  b.add({ op: 'revolve', sketch: hole, axis: 'Z', mode: 'cut', target: 'blk' });
+  const cut = await buildModel(b.toJSON());
+  assert.ok(cut.report.ok, JSON.stringify(cut.report.steps));
+  close(cut.report.bodies.blk?.volume ?? 0, 50 * 50 * 30 - Math.PI * 100 * 30, 1e-2);
+});
+
+test('revolve validates its inputs', async () => {
+  const b = new ModelBuilder();
+  assert.throws(() => b.add({ op: 'revolve', sketch: 'nope', axis: 'Z' }), /Unknown sketch "nope"/);
+  assert.throws(() => b.add({ op: 'revolve', sketch: 's', axis: 'W' }), /Invalid step/);
+  const s = b.add({
+    op: 'sketch',
+    plane: 'XZ',
+    profile: [{ shape: 'rect', w: 10, h: 30, cx: 15, cy: 15 }],
+  });
+  b.add({ op: 'revolve', id: 'bad', sketch: s, axis: 'Z', angle: 400 });
+  const m = await buildModel(b.toJSON());
+  assert.match(m.report.steps.find((x) => x.id === 'bad')?.error ?? '', /between 0 and 360/);
+  const noTarget = new ModelBuilder();
+  const s2 = noTarget.add({
+    op: 'sketch',
+    plane: 'XZ',
+    profile: [{ shape: 'rect', w: 10, h: 30, cx: 15, cy: 15 }],
+  });
+  noTarget.add({ op: 'revolve', id: 'x', sketch: s2, axis: 'Z', mode: 'cut' });
+  const m2 = await buildModel(noTarget.toJSON());
+  assert.match(m2.report.steps.find((x) => x.id === 'x')?.error ?? '', /needs a target/);
+});
