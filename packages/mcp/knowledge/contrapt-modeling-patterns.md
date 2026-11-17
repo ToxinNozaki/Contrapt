@@ -59,7 +59,7 @@ Mirror or symmetric parts: `symmetric: true` on extrude, or compute mirrored pos
 
 ## What does not exist yet (do not pretend it does)
 - Splines and ellipses in sketches (constrained sketches support lines, arcs and circles).
-- Sweep, draft, thread features, ribs, patterns/mirror as one-click features.
+- Draft, thread features, ribs, patterns/mirror as one-click features.
 - Assemblies with joints and mates; motion studies.
 - Stress/modal/thermal simulation; interference checks and wall-thickness analysis (coming in later milestones).
 - Sheet metal flanges/bends, drawings, and any import other than STEP (see `importing-cad-files`).
@@ -67,6 +67,9 @@ Mirror or symmetric parts: `symmetric: true` on extrude, or compute mirrored pos
 ## Workarounds today
 - **Turned parts, bottles, knobs, pulleys:** use `revolve`. Sketch the half profile (a `polygon` of [x, z] points) on the XZ
   plane with one edge on the axis, then `revolve` about Z. Exact, and parametric.
+- **Pipes, tubes, rails, handles, cable runs:** `sweep` a circle (or any closed outline) along a `path` of 3D points with a
+  `bendRadius` for real bends. Volume = profile area x centre-line length, which is a handy check. Hollow tube = sweep the outer
+  circle and the inner circle separately, then a `boolean` cut. Keep the bend radius at least the profile radius (usually 1.5-3x for real pipe).
 - **Tapers, adapters, funnels, countersinks:** `loft` between two or more sketches placed with `offset` (a round-to-square transition is one loft;
   a countersink is a loft cut).
 - **Arcs/rounded slots:** a `rect` with `cornerRadius`, or `circle` items combined with `rect` items.

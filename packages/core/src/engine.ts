@@ -12,10 +12,12 @@ import {
   drawRoundedRectangle,
   EdgeFinder,
   FaceFinder,
+  genericSweep,
   importSTEP,
   makeBox,
   makeCylinder,
   makeSphere,
+  Plane,
   type Shape3D,
   type Sketch,
 } from 'replicad';
@@ -23,6 +25,7 @@ import { evalExpr, exprNames, type Num } from './expr.ts';
 import { detectFormat } from './import.ts';
 import { initKernel } from './kernel.ts';
 import { type BodyInfo, describeBody } from './measure.ts';
+import { buildSpine, profileFrame, type V3 } from './path.ts';
 import { as3D } from './shapes.ts';
 import { loopToPath, loopToPolygon, type PathSeg, solveSketch } from './sketch.ts';
 import type { EdgeSelector, FaceSelector, ProfileItem, Step, Timeline } from './timeline.ts';
@@ -368,6 +371,48 @@ async function runStep(step: Step, ctx: Ctx): Promise<StepInfo | undefined> {
         ctx.bodies.set(step.id, solid);
       } else {
         if (!step.target) throw new Error(`revolve mode "${mode}" needs a target body`);
+        const t = get(ctx, step.target);
+        ctx.bodies.set(step.target, mode === 'add' ? t.fuse(solid) : t.cut(solid));
+      }
+      return;
+    }
+    case 'sweep': {
+      const sk = ctx.sketches.get(step.sketch);
+      if (!sk) {
+        throw new Error(
+          `No sketch "${step.sketch}". Existing sketches: ${[...ctx.sketches.keys()].join(', ') || '(none yet)'}`,
+        );
+      }
+      const pts = step.path.points.map((p) => vec(p) as V3);
+      const spine = buildSpine(
+        pts,
+        step.path.bendRadius === undefined ? 0 : n(step.path.bendRadius),
+      );
+      const cleaned = pts.filter(
+        (p, i) =>
+          i === 0 ||
+          Math.hypot(
+            p[0] - (pts[i - 1] as V3)[0],
+            p[1] - (pts[i - 1] as V3)[1],
+            p[2] - (pts[i - 1] as V3)[2],
+          ) > 1e-9,
+      );
+      const { dir, xDir } = profileFrame(cleaned[0] as V3, cleaned[1] as V3);
+      const placed = sk.drawing.sketchOnPlane(new Plane(cleaned[0] as V3, xDir, dir));
+      if (!('wire' in placed)) {
+        throw new Error(
+          'A sweep profile must be a single closed outline without holes. For a hollow pipe, sweep the outer and inner profiles separately and use a boolean cut.',
+        );
+      }
+      const solid = as3D(
+        genericSweep((placed as Sketch).wire, spine, { forceProfileSpineOthogonality: true }),
+        'sweep',
+      );
+      const mode = step.mode ?? 'new';
+      if (mode === 'new') {
+        ctx.bodies.set(step.id, solid);
+      } else {
+        if (!step.target) throw new Error(`sweep mode "${mode}" needs a target body`);
         const t = get(ctx, step.target);
         ctx.bodies.set(step.target, mode === 'add' ? t.fuse(solid) : t.cut(solid));
       }

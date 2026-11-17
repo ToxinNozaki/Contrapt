@@ -46,6 +46,7 @@ constrained_sketch {plane, offset?, points:{A:[x,y],...}, lines:{AB:['A','B'],..
 extrude {sketch, distance, symmetric?, mode?: new|add|cut, target?}  -- add/cut modify \`target\` in place
 revolve {sketch, axis: X|Y|Z, origin?, angle? (degrees, default 360), mode?, target?}  -- spins the sketch profile about a WORLD axis; keep the profile on one side of the axis (turned parts: sketch on XZ, axis Z)
 loft {sketches:[id, id, ...], ruled?, mode?, target?}  -- blends through 2-12 sketches, each on its own plane/offset (e.g. round-to-square adapters, tapers, funnels, countersinks via mode cut)
+sweep {sketch, path:{points:[[x,y,z],...], bendRadius?}, mode?, target?}  -- drags a profile along a 3D path (pipes, rails, handles, wires). The profile is placed automatically at the path start, perpendicular to it (its sketch plane is ignored): for a path starting along +Z the profile x/y follow world X/Y; for a horizontal start, profile x is horizontal (world Z cross direction) and profile y is up. Profile must be one closed outline (no holes): make hollow tubes with two sweeps and a boolean cut. bendRadius rounds every corner with an exact arc.
 fillet {target, radius, edges}   chamfer {target, distance, edges}   shell {target, thickness, faces}
 boolean {kind: union|cut|intersect, a, b}  -- consumes a and b, creates a new body with this step's id
 transform {target, translate?:[x,y,z], rotate?:{angle,axis,origin?}}

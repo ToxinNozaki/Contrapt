@@ -218,6 +218,25 @@ export const StepInput = z.discriminatedUnion('op', [
     mode: Mode.optional(),
     target: Id.optional(),
   }),
+  z.object({
+    ...base,
+    op: z.literal('sweep'),
+    sketch: Id.describe(
+      'the profile; it is placed automatically at the start of the path, perpendicular to it',
+    ),
+    path: z.object({
+      points: z
+        .array(Vec3)
+        .min(2)
+        .max(200)
+        .describe('3D points the path passes through, joined by straight pieces'),
+      bendRadius: Num.optional().describe(
+        'round every interior corner with this radius (pipe bends)',
+      ),
+    }),
+    mode: Mode.optional(),
+    target: Id.optional(),
+  }),
   z.object({ ...base, op: z.literal('fillet'), target: Id, radius: Num, edges: EdgeSelector }),
   z.object({ ...base, op: z.literal('chamfer'), target: Id, distance: Num, edges: EdgeSelector }),
   z.object({ ...base, op: z.literal('shell'), target: Id, thickness: Num, faces: FaceSelector }),

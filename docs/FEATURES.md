@@ -23,7 +23,7 @@ Status: `[ ]` planned · `[~]` in progress · `[x]` done · `[-]` dropped (say w
 - [~] Named parameters and equations — named params + safe expression evaluator done (2026-11-15); driven/reference dimensions pending
 - [ ] Work planes, axes, points; sketch on face
 - [~] Extrude — blind, symmetric, new/add/cut done (2026-11-15); through-all and up-to pending
-- [~] Revolve and loft done (2026-11-17; closed-form tested: frustum, cone frustum, prism, 3-section); sweep along a path and coil/spring pending
+- [~] Revolve, loft and sweep done (2026-11-17; closed-form tested incl. Pappus for bent pipes); coil/spring pending (a sweep with a helical path is the natural route)
 - [~] Fillet, chamfer, shell done (2026-11-15); draft and offset face pending
 - [ ] Hole wizard (simple, counterbore, countersink, tapped), cosmetic threads
 - [ ] Rib, web, emboss/deboss
@@ -36,7 +36,7 @@ Status: `[ ]` planned · `[~]` in progress · `[x]` done · `[-]` dropped (say w
 - [ ] Richer selectors: curve type, face normals, "outer corner edges", named/saved selections (hole seam edges currently count as vertical edges) — added 2026-11-15
 - [ ] WASM memory management: explicitly free intermediate shapes in long sessions — added 2026-11-15
 - [ ] More primitives in the timeline: cone, torus, ellipsoid, wedge, text — added 2026-11-15
-- [~] Revolve and loft are timeline ops now (2026-11-17); sweep still needs a path definition (polyline/arc spine) in the schema — added 2026-11-15
+- [x] Revolve, loft and sweep are timeline ops (2026-11-17). Sweep follow-ups: hollow profiles in one step, helical/spline paths, guide rails, twist — added 2026-11-15
 
 - [x] Arcs in constrained sketches (centre/start/end, ccw; radius/diameter, onCircle, tangent line-arc / arc-arc / circle-arc; mixed line+arc loops, either direction) - 2026-11-17
 - [ ] Symmetric and midpoint constraints, reference dimensions, sketch on a face of an existing body - added 2026-11-17
