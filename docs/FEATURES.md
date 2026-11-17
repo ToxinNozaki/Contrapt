@@ -25,9 +25,9 @@ Status: `[ ]` planned · `[~]` in progress · `[x]` done · `[-]` dropped (say w
 - [~] Extrude — blind, symmetric, new/add/cut done (2026-11-15); through-all and up-to pending
 - [~] Revolve, loft and sweep done (2026-11-17; closed-form tested incl. Pappus for bent pipes); coil/spring pending (a sweep with a helical path is the natural route)
 - [~] Fillet, chamfer, shell done (2026-11-15); draft and offset face pending
-- [ ] Hole wizard (simple, counterbore, countersink, tapped), cosmetic threads
+- [x] Hole step (2026-11-17): simple, counterbore, countersink, blind or through, six drilling directions, standard M2-M10 sizes (clearance/close/tap drill), cosmetic thread note, position lists and patterns; every variant closed-form tested; the screw table is tied to the knowledge pack by a test. Real thread geometry pending
 - [ ] Rib, web, emboss/deboss
-- [ ] Patterns (rectangular, circular, path), mirror
+- [~] Patterns: linear and circular done as a step (tool body repeated, cut or add) and inside holes; mirror done (add/new, offset). Path patterns pending (2026-11-17)
 - [~] Boolean union/cut/intersect done (2026-11-15); split and thicken pending
 - [~] Feature timeline with rebuild, suppress, remove done (2026-11-15); reorder and edit-in-place pending
 - [ ] Materials library with density, modulus, yield, Poisson, CTE, cost/kg

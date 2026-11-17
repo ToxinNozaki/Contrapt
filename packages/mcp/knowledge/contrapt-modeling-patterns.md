@@ -59,7 +59,7 @@ Mirror or symmetric parts: `symmetric: true` on extrude, or compute mirrored pos
 
 ## What does not exist yet (do not pretend it does)
 - Splines and ellipses in sketches (constrained sketches support lines, arcs and circles).
-- Draft, thread features, ribs, patterns/mirror as one-click features.
+- Draft, real (modelled) thread geometry, ribs.
 - Assemblies with joints and mates; motion studies.
 - Stress/modal/thermal simulation; interference checks and wall-thickness analysis (coming in later milestones).
 - Sheet metal flanges/bends, drawings, and any import other than STEP (see `importing-cad-files`).
@@ -70,6 +70,11 @@ Mirror or symmetric parts: `symmetric: true` on extrude, or compute mirrored pos
 - **Pipes, tubes, rails, handles, cable runs:** `sweep` a circle (or any closed outline) along a `path` of 3D points with a
   `bendRadius` for real bends. Volume = profile area x centre-line length, which is a handy check. Hollow tube = sweep the outer
   circle and the inner circle separately, then a `boolean` cut. Keep the bend radius at least the profile radius (usually 1.5-3x for real pipe).
+- **Holes for screws:** use the `hole` step with a screw `size` ("M4"): it picks the standard clearance, close or tap-drill diameter,
+  and `counterbore: true` / `countersink: true` size the pocket for the screw head. A tapped hole is cut at the tap-drill diameter
+  (the thread is cosmetic: say so in the notes). `at` is the point on the SURFACE where drilling starts; `direction` is into the material.
+- **Repeated features:** give `hole` a `pattern` (bolt circle: `{kind:'circular', count:6, axis:'Z'}`), or build one tool body
+  (cylinder, slot) and use the `pattern` step to cut or add copies. For symmetric parts model half and `mirror` it.
 - **Tapers, adapters, funnels, countersinks:** `loft` between two or more sketches placed with `offset` (a round-to-square transition is one loft;
   a countersink is a loft cut).
 - **Arcs/rounded slots:** a `rect` with `cornerRadius`, or `circle` items combined with `rect` items.

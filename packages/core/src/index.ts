@@ -10,6 +10,14 @@ export {
 export { exportStep, exportStl, meshBodies, type ViewerMesh } from './export.ts';
 export { evalExpr, exprNames, type Num } from './expr.ts';
 export {
+  DIRECTIONS,
+  holeTool,
+  SCREW_SIZES,
+  SCREWS,
+  type ScrewSize,
+  screwDiameter,
+} from './holes.ts';
+export {
   describeStep,
   detectFormat,
   type FormatInfo,
@@ -29,6 +37,7 @@ export {
 export { makeInventorLikeFixture, propertySet, TINY_PNG } from './inventor-fixture.ts';
 export { initKernel, kernelDiagnostics } from './kernel.ts';
 export { type BodyInfo, describeBody } from './measure.ts';
+export { mirrorPlane, patternCopies, patternPositions } from './pattern.ts';
 export {
   encodePng,
   NAMED_VIEWS,

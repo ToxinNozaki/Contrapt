@@ -4,6 +4,7 @@
 // scripts compile into the same steps. Rebuilding the timeline always reproduces the geometry.
 // Any numeric field may be a number or an expression string that references parameters.
 import { z } from 'zod';
+import { DIRECTIONS, SCREW_SIZES } from './holes.ts';
 import { isSafeFileName } from './import.ts';
 import { CONSTRAINT_TYPES } from './sketch.ts';
 
@@ -99,6 +100,21 @@ const FileName = z
     isSafeFileName,
     'plain file name only (letters, digits, space, _ . ( ) + -); no folders or ".."',
   );
+
+const PatternSpec = z.discriminatedUnion('kind', [
+  z.object({
+    kind: z.literal('linear'),
+    count: z.number().int().min(2).max(500),
+    step: Vec3.describe('offset between instances'),
+  }),
+  z.object({
+    kind: z.literal('circular'),
+    count: z.number().int().min(2).max(500),
+    axis: AxisName,
+    center: Vec3.optional().describe('a point on the axis (default origin)'),
+    angle: Num.optional().describe('total sweep in degrees, default 360 (spread evenly)'),
+  }),
+]);
 
 const EntityName = z
   .string()
@@ -236,6 +252,58 @@ export const StepInput = z.discriminatedUnion('op', [
     }),
     mode: Mode.optional(),
     target: Id.optional(),
+  }),
+  z.object({
+    ...base,
+    op: z.literal('hole'),
+    target: Id,
+    at: z
+      .union([Vec3, z.array(Vec3).min(1).max(500)])
+      .describe('where the hole starts on the surface: one [x,y,z] or a list'),
+    direction: z
+      .enum(DIRECTIONS)
+      .optional()
+      .describe('drilling direction into the material, default -Z (down from a top face)'),
+    size: z
+      .enum(SCREW_SIZES)
+      .optional()
+      .describe('metric screw size: sets the diameter from real standards'),
+    fit: z
+      .enum(['normal', 'close', 'tap'])
+      .optional()
+      .describe('clearance fit (default normal), close fit, or tap drill for a threaded hole'),
+    diameter: Num.optional().describe('explicit diameter (overrides size)'),
+    depth: Num.optional().describe('blind depth from the surface; omit for a through hole'),
+    counterbore: z
+      .union([z.literal(true), z.object({ diameter: Num.optional(), depth: Num.optional() })])
+      .optional()
+      .describe('true = sized for a socket-head screw of this size'),
+    countersink: z
+      .union([z.literal(true), z.object({ diameter: Num.optional(), angle: Num.optional() })])
+      .optional()
+      .describe('true = 90 degree countersink about twice the screw diameter'),
+    pattern: PatternSpec.optional().describe('repeat the hole(s) in a linear or circular pattern'),
+  }),
+  z.object({
+    ...base,
+    op: z.literal('pattern'),
+    target: Id,
+    tool: Id.describe('the body to repeat (it is consumed); instance 1 is the tool where it is'),
+    pattern: PatternSpec,
+    mode: z
+      .enum(['cut', 'add'])
+      .describe('subtract the copies from the target, or fuse them to it'),
+  }),
+  z.object({
+    ...base,
+    op: z.literal('mirror'),
+    target: Id,
+    axis: AxisName.describe('mirror across the plane perpendicular to this axis'),
+    offset: Num.optional().describe('where that plane sits along the axis (default 0)'),
+    mode: z
+      .enum(['add', 'new'])
+      .optional()
+      .describe('add = fuse the mirror image to the target (default), new = a separate body'),
   }),
   z.object({ ...base, op: z.literal('fillet'), target: Id, radius: Num, edges: EdgeSelector }),
   z.object({ ...base, op: z.literal('chamfer'), target: Id, distance: Num, edges: EdgeSelector }),

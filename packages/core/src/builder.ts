@@ -22,6 +22,9 @@ export const STEP_OPS: StepOp[] = [
   'revolve',
   'loft',
   'sweep',
+  'hole',
+  'pattern',
+  'mirror',
   'fillet',
   'chamfer',
   'shell',
@@ -120,6 +123,14 @@ export class ModelBuilder {
         need(step.sketch, sketches, 'sketch');
         need(step.target, bodies, 'body');
         break;
+      case 'hole':
+      case 'mirror':
+        need(step.target, bodies, 'body');
+        break;
+      case 'pattern':
+        need(step.target, bodies, 'body');
+        need(step.tool, bodies, 'body');
+        break;
       case 'fillet':
       case 'chamfer':
       case 'shell':
@@ -146,6 +157,8 @@ export class ModelBuilder {
         (s.mode ?? 'new') === 'new'
       )
         ids.add(s.id);
+      else if (s.op === 'pattern') ids.delete(s.tool);
+      else if (s.op === 'mirror' && s.mode === 'new') ids.add(s.id);
       else if (s.op === 'boolean') {
         ids.delete(s.a);
         ids.delete(s.b);

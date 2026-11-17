@@ -47,6 +47,10 @@ extrude {sketch, distance, symmetric?, mode?: new|add|cut, target?}  -- add/cut 
 revolve {sketch, axis: X|Y|Z, origin?, angle? (degrees, default 360), mode?, target?}  -- spins the sketch profile about a WORLD axis; keep the profile on one side of the axis (turned parts: sketch on XZ, axis Z)
 loft {sketches:[id, id, ...], ruled?, mode?, target?}  -- blends through 2-12 sketches, each on its own plane/offset (e.g. round-to-square adapters, tapers, funnels, countersinks via mode cut)
 sweep {sketch, path:{points:[[x,y,z],...], bendRadius?}, mode?, target?}  -- drags a profile along a 3D path (pipes, rails, handles, wires). The profile is placed automatically at the path start, perpendicular to it (its sketch plane is ignored): for a path starting along +Z the profile x/y follow world X/Y; for a horizontal start, profile x is horizontal (world Z cross direction) and profile y is up. Profile must be one closed outline (no holes): make hollow tubes with two sweeps and a boolean cut. bendRadius rounds every corner with an exact arc.
+hole {target, at:[x,y,z] or a list, direction? (+X -X +Y -Y +Z -Z, default -Z = down into a top face), size? (M2 M2.5 M3 M4 M5 M6 M8 M10) with fit? (normal clearance | close | tap = tap-drill for a threaded hole, cosmetic), or diameter?, depth? (omit = through), counterbore? (true = sized for a socket-head screw of that size), countersink? (true = 90 degree, 2x screw diameter), pattern?}
+  -- 'at' is where the hole STARTS on the surface. The note reports what was drilled.
+pattern {target, tool: <body id>, pattern:{kind:'linear',count,step:[dx,dy,dz]} | {kind:'circular',count,axis,center?,angle?}, mode: cut|add}  -- repeats a body (consumed) into the target
+mirror {target, axis: X|Y|Z, offset?, mode?: add (default, fuse the mirror image) | new}  -- mirror across the plane perpendicular to the axis
 fillet {target, radius, edges}   chamfer {target, distance, edges}   shell {target, thickness, faces}
 boolean {kind: union|cut|intersect, a, b}  -- consumes a and b, creates a new body with this step's id
 transform {target, translate?:[x,y,z], rotate?:{angle,axis,origin?}}

@@ -6,6 +6,7 @@ import { userInfo } from 'node:os';
 import { dirname, join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
+import { SCREWS } from '@contrapt/core';
 import { getKnowledge, loadKnowledge, parseKnowledge } from '../src/knowledge.ts';
 import { buildPlaybook, PLAYBOOKS } from '../src/prompts.ts';
 
@@ -214,4 +215,22 @@ test('playbook arguments are validated', () => {
     buildPlaybook('design_part', { goal: 'a hook', constraints: 'holds 2 kg' }),
     /holds 2 kg/,
   );
+});
+
+test('the hole tool screw table matches the fasteners knowledge pack (code and docs cannot drift)', () => {
+  const pack = getKnowledge('fasteners-and-joints').body;
+  for (const [size, s] of Object.entries(SCREWS)) {
+    const row = pack.split('\n').find((l) => l.startsWith(`| ${size} |`));
+    assert.ok(row, `no row for ${size} in the pack`);
+    const cells = row
+      .split('|')
+      .map((c) => c.trim())
+      .filter(Boolean);
+    assert.equal(Number.parseFloat(cells[1] as string), s.clearance, `${size} clearance`);
+    assert.equal(Number.parseFloat(cells[2] as string), s.close, `${size} close`);
+    assert.equal(Number.parseFloat(cells[3] as string), s.tap, `${size} tap drill`);
+    const [head, height] = (cells[4] as string).split('×').map((x) => Number.parseFloat(x));
+    assert.equal(head, s.headDia, `${size} head diameter`);
+    assert.equal(height, s.headHeight, `${size} head height`);
+  }
 });

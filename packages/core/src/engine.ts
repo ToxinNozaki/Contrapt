@@ -22,10 +22,12 @@ import {
   type Sketch,
 } from 'replicad';
 import { evalExpr, exprNames, type Num } from './expr.ts';
+import { holeTool, SCREWS, type ScrewSize, screwDiameter } from './holes.ts';
 import { detectFormat } from './import.ts';
 import { initKernel } from './kernel.ts';
 import { type BodyInfo, describeBody } from './measure.ts';
 import { buildSpine, profileFrame, type V3 } from './path.ts';
+import { mirrorPlane, type PatternNumeric, patternCopies, patternPositions } from './pattern.ts';
 import { as3D } from './shapes.ts';
 import { loopToPath, loopToPolygon, type PathSeg, solveSketch } from './sketch.ts';
 import type { EdgeSelector, FaceSelector, ProfileItem, Step, Timeline } from './timeline.ts';
@@ -91,6 +93,8 @@ export type FileProvider = (name: string) => Promise<Uint8Array>;
 export interface BuildOptions {
   files?: FileProvider;
 }
+
+type PatternSpecInput = Extract<Step, { op: 'hole' }>['pattern'] & object;
 
 type Ctx = {
   files?: FileProvider;
@@ -218,6 +222,20 @@ function assertCount(kind: string, found: number, expect: number | undefined) {
   if (expect !== undefined && found !== expect) {
     throw new Error(`${kind} selector matched ${found} but expected ${expect}`);
   }
+}
+
+function numericPattern(p: PatternSpecInput, n: Ctx['n']): PatternNumeric {
+  if (p.kind === 'linear') {
+    return { kind: 'linear', count: p.count, step: [n(p.step[0]), n(p.step[1]), n(p.step[2])] };
+  }
+  const c = p.center ?? [0, 0, 0];
+  return {
+    kind: 'circular',
+    count: p.count,
+    axis: p.axis,
+    center: [n(c[0]), n(c[1]), n(c[2])],
+    angle: p.angle === undefined ? 360 : n(p.angle),
+  };
 }
 
 // ---- step execution -----------------------------------------------------------------------------
@@ -416,6 +434,93 @@ async function runStep(step: Step, ctx: Ctx): Promise<StepInfo | undefined> {
         const t = get(ctx, step.target);
         ctx.bodies.set(step.target, mode === 'add' ? t.fuse(solid) : t.cut(solid));
       }
+      return;
+    }
+    case 'hole': {
+      let t = get(ctx, step.target);
+      const size = step.size as ScrewSize | undefined;
+      const fit = step.fit ?? 'normal';
+      const diameter =
+        step.diameter !== undefined
+          ? n(step.diameter)
+          : size
+            ? screwDiameter(size, fit)
+            : undefined;
+      if (diameter === undefined || !(diameter > 0)) {
+        throw new Error('A hole needs a "size" (for example "M4") or an explicit "diameter"');
+      }
+      const bb = t.boundingBox.bounds as unknown as [number[], number[]];
+      const span = Math.hypot(
+        (bb[1][0] ?? 0) - (bb[0][0] ?? 0),
+        (bb[1][1] ?? 0) - (bb[0][1] ?? 0),
+        (bb[1][2] ?? 0) - (bb[0][2] ?? 0),
+      );
+      const through = step.depth === undefined;
+      const depth = through ? span * 2 + 1 : n(step.depth as Num);
+      if (!(depth > 0)) throw new Error('hole depth must be greater than 0');
+      const major = size ? Number(size.slice(1)) : diameter;
+      let counterbore: { diameter: number; depth: number } | undefined;
+      if (step.counterbore) {
+        const c = step.counterbore === true ? {} : step.counterbore;
+        const base = size ? SCREWS[size] : undefined;
+        const cd = c.diameter !== undefined ? n(c.diameter) : base ? base.headDia + 0.5 : undefined;
+        const cdep = c.depth !== undefined ? n(c.depth) : base ? base.headHeight + 0.3 : undefined;
+        if (cd === undefined || cdep === undefined)
+          throw new Error('counterbore needs a screw "size" or explicit diameter and depth');
+        counterbore = { diameter: cd, depth: cdep };
+      }
+      let countersink: { diameter: number; angle: number } | undefined;
+      if (step.countersink) {
+        const c = step.countersink === true ? {} : step.countersink;
+        countersink = {
+          diameter: c.diameter !== undefined ? n(c.diameter) : major * 2,
+          angle: c.angle !== undefined ? n(c.angle) : 90,
+        };
+      }
+      if (counterbore && countersink)
+        throw new Error('A hole can have a counterbore or a countersink, not both');
+      const raw = step.at as Num[] | Num[][];
+      const list = (Array.isArray(raw[0]) ? (raw as Num[][]) : [raw as Num[]]).map(
+        (p) => [n(p[0] as Num), n(p[1] as Num), n(p[2] as Num)] as V3,
+      );
+      const pat = step.pattern ? numericPattern(step.pattern, n) : undefined;
+      const positions = pat ? list.flatMap((p) => patternPositions(p, pat)) : list;
+      const spec = { diameter, depth, counterbore, countersink };
+      for (const p of positions) t = t.cut(holeTool(spec, p, step.direction ?? '-Z'));
+      ctx.bodies.set(step.target, t);
+      const kind = counterbore
+        ? `counterbore \u00d8${counterbore.diameter} x ${counterbore.depth} deep`
+        : countersink
+          ? `countersink \u00d8${countersink.diameter} at ${countersink.angle} degrees`
+          : 'plain';
+      const label = size
+        ? `${size} ${fit === 'tap' ? 'tap drill (cosmetic thread)' : fit + ' clearance'}`
+        : 'custom diameter';
+      return {
+        note: `${positions.length} hole(s) \u00d8${diameter} (${label}), ${kind}, ${through ? 'through' : `${depth} deep`}`,
+      };
+    }
+    case 'pattern': {
+      const t = get(ctx, step.target);
+      const tool = get(ctx, step.tool);
+      const copies = patternCopies(tool, numericPattern(step.pattern, n));
+      let r = t;
+      for (const c of copies) r = step.mode === 'cut' ? r.cut(c) : r.fuse(c);
+      ctx.bodies.delete(step.tool);
+      ctx.bodies.set(step.target, r);
+      return {
+        note: `${copies.length} instances ${step.mode === 'cut' ? 'cut from' : 'fused to'} "${step.target}"`,
+      };
+    }
+    case 'mirror': {
+      const t = get(ctx, step.target);
+      const { plane, origin } = mirrorPlane(
+        step.axis,
+        step.offset === undefined ? 0 : n(step.offset),
+      );
+      const image = as3D(t.clone().mirror(plane, origin), 'mirror');
+      if ((step.mode ?? 'add') === 'new') ctx.bodies.set(step.id, image);
+      else ctx.bodies.set(step.target, t.fuse(image));
       return;
     }
     case 'loft': {
