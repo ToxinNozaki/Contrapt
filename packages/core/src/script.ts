@@ -22,7 +22,7 @@ export interface ScriptOptions {
 const PRELUDE = `(function (call) {
   const g = globalThis;
   const wrap = (op) => (args) => call(op, JSON.stringify(args === undefined ? {} : args));
-  for (const op of ${JSON.stringify(STEP_OPS)}) g[op] = wrap(op);
+  for (const op of ${JSON.stringify(STEP_OPS)}) g[op === 'import' ? 'importFile' : op] = wrap(op); // import is reserved JavaScript syntax
   g.param = (name, value) => call('param', JSON.stringify({ name, value }));
 })`;
 

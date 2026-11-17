@@ -115,7 +115,9 @@ Status: `[ ]` planned · `[~]` in progress · `[x]` done · `[-]` dropped (say w
 - [ ] Native readers for SolidWorks/Fusion/CATIA/NX/Creo (all proprietary; STEP route for now) — 2026-11-15
 
 - [x] Tool results can carry images (MCP image blocks), so clients that can see images get previews — 2026-11-15
-- [ ] `render_view` tool: a headless render of the current model as an image so the AI can SEE its own work and compare it with a reference (highest-value next step for the Proof Loop; a Chromium is pre-installable via Playwright) — added 2026-11-15
+- [x] `render_view` tool + pure-JS software renderer (no browser/GPU): shaded solids, feature edges, axis triad, iso/front/back/left/right/top/bottom or custom angles, up to 6 views per call, images returned to the AI and saved under renders/ — 2026-11-17 (about 160 ms for a 217-face part)
+- [ ] Renderer upgrades: smooth-shaded curved surfaces without faceting, section views, dimension overlays, side-by-side with a reference image, highlight a body/face by id — added 2026-11-17
+- [ ] Script mode: `importFile` alias exists because `import` is reserved JavaScript; keep other step names clear of reserved words — noted 2026-11-17
 - [x] Playbook `recreate_from_reference`: rebuild a part from a preview/reference with a fidelity statement — 2026-11-15
 
 - [ ] Gated real-file regression harness (`CONTRAPT_SAMPLE_IPT` + `CONTRAPT_CADMPEG`) built 2026-11-15; collect a few permissively licensed sample Inventor files (assemblies, older versions) to test against - added 2026-11-15

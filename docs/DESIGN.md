@@ -1,7 +1,8 @@
 # Contrapt — design doc
 
 > **Where we left off** (update this at every stop)
-> - **Date:** 2026-11-15
+> - **Date:** 2026-11-17 (session resumed; render_view added; header below partly historical, newest first)
+> - **Newest:** `render_view` (pure-JS renderer, PNG images to the AI) built and tested; Inventor files convert via cadmpeg and import exactly (see EDITLOG). Next: M3 (sketch constraints, revolve/sweep/loft), then finish M2 (npx build, HTTP transport).
 > - **Phase:** M0, M1 done; **M2 (MCP server + live viewer) about 85%** — built and tested; real-client verification and `npx` build remain.
 > - **Last thing done:** M2: MCP server (13 tools, stdio) + live three.js viewer + SETUP.md. 55 tests pass,
 >   incl. a real stdio subprocess test. Viewer screenshot-verified; demo bracket volume matches hand calc.

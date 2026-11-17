@@ -146,7 +146,7 @@ Recreate a part from a reference. File: ${a.file ?? '(none: ask what to recreate
 2. Be explicit about what a preview can and cannot tell you: it is one angle, with no dimensions, no hidden features, and no exact proportions. List what you can infer and what you are guessing.
 3. Ask for the few measurements that matter most (overall size, thickness, hole/pocket sizes, any known standard parts), at most 3 questions. Offer the user the exact route as well: export STEP from the original program.
 4. Build the model with parameters for every guessed dimension so it is easy to correct. Use loops in a script for repeated features (pockets, hole patterns).
-5. Compare with the reference: count features, check proportions against the picture, and measure the result. Show the viewer link.
+5. Compare with the reference: call render_view (try iso, top and front together) and set it beside the reference picture; count features, check proportions, and measure the result. Show the viewer link.
 6. Finish with a fidelity statement: what matches, what is estimated, what is unknown, and the quickest way to make it exact (STEP export).
 
 ${pack('importing-cad-files')}

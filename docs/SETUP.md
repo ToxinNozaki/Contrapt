@@ -146,6 +146,7 @@ geometry converts and imports exactly; sketches, features and history are not tr
 | `export_model` | STEP (exact CAD) or STL (3D printing) into the output folder |
 | `save_model`, `load_model`, `list_models` | Keep work between sessions |
 | `view` | The live viewer link |
+| `render_view` | Render the model to images (iso, top, front, ...) so the AI can see its own work |
 | `convert_file` | (optional) convert a native CAD file to STEP with a converter you enabled |
 | `inspect_file`, `import_file` | Identify a file from another CAD program; import a STEP as an exact body |
 | `get_playbook`, `list_knowledge`, `get_knowledge` | Expert prompts and engineering knowledge for any client |

@@ -29,6 +29,14 @@ export {
 export { makeInventorLikeFixture, propertySet, TINY_PNG } from './inventor-fixture.ts';
 export { initKernel, kernelDiagnostics } from './kernel.ts';
 export { type BodyInfo, describeBody } from './measure.ts';
+export {
+  encodePng,
+  NAMED_VIEWS,
+  type RenderOptions,
+  type RenderResult,
+  renderMeshes,
+  type ViewName,
+} from './render.ts';
 export { compileScript, type ScriptOptions } from './script.ts';
 export { as3D } from './shapes.ts';
 export {

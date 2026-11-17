@@ -76,3 +76,12 @@ so nothing is lost even if a bullet here is missed. Repo-relative paths only (th
 - Added a gated REAL test (`CONTRAPT_SAMPLE_IPT` + `CONTRAPT_CADMPEG`), skipped by default and in CI.
 - Privacy: the machine's global git email is a personal address, so this repo's _local_ git config uses
   the GitHub noreply address; commits must never carry the personal one.
+
+## 2026-11-17 — Session 2: render_view
+
+- Resumed from the repo's own notes (git clean, CI green). The Contrapt MCP server is now live inside this Claude Code session, so tools can be driven directly.
+- **Built `render_view`** (owner approved the plan): `core/src/render.ts` is a pure-JavaScript software rasteriser (no browser/GPU/native dependency, keeping Contrapt light): z-buffered shaded triangles with interpolated normals, 2x supersampling, feature edges (boundary or >28 degree crease, welded by quantised position), axis triad (X red, Y green, Z blue), own PNG encoder (node:zlib deflate + crc32). Views: iso/front/back/left/right/top/bottom or custom azimuth/elevation; ortho for axis views, perspective for iso. `mcp/src/tools-render.ts` returns up to 6 views as MCP images and saves them under `renders/`.
+- Tests: valid PNG of requested size; **top view of a 40x20 box has 2:1 silhouette**; **orientation check with three coloured bodies** (+X renders right, +Y renders up in top view); edges toggle changes pixels; determinism; empty model; size clamping; custom angles; tool returns real PNG blocks and saves files. Visual check on the owner's imported Inventor part (163 ms): the top view shows five pentagons in a ring, six hexagons and nested chevrons that the original preview image hid.
+- **Bug found by using it:** script mode could not call the import step because `import(...)` is reserved JavaScript syntax. Added `importFile` as the script name (+ test + docs). Lesson: keep step names clear of reserved words.
+- Two of my own edit scripts broke syntax by putting backticks inside template literals; caught by lint/typecheck immediately and repaired.
+- Docs: ledger, SETUP tools table, README, playbook `recreate_from_reference`, importing and patterns packs now tell the AI to use render_view. The DESIGN.md "Where we left off" header was stale (still 2026-11-15) and is refreshed.

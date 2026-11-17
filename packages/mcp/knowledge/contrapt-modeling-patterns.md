@@ -18,6 +18,7 @@ holes and fillets. Native Inventor/SolidWorks files must be exported to STEP fir
 - **Order of operations:** sketch → extrude → fillet/chamfer outer edges → shell → drill holes. Fillet *before*
   cutting holes when you want only the outer corners (a hole's seam adds vertical edges); or use a
   `box` edge selector, and always add `expect: N`.
+- **Look at it:** call `render_view` (iso, top, front) after building. Numbers catch wrong sizes; pictures catch wrong shapes, missing features and mirrored layouts.
 - **Verify after each step:** compare the reported volume and bounding box to your hand calculation.
 - **Scripts can loop.** `run_script` is JavaScript: build patterns with `for` loops and `Math`.
 

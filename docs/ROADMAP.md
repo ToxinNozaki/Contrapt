@@ -126,7 +126,7 @@ goes from README to first modeled part in under five minutes.
 
 ## Now / Next / Later
 
-- **Now:** M2 — MCP server + live viewer (the first "wow").
+- **Now:** M2 wrap-up (npx build, HTTP transport, Claude Desktop/LM Studio checks) and M3 start. `render_view` done 2026-11-17.
 - **Next:** M3 — sketch constraints and part depth (revolve/sweep/loft, holes, patterns); M4 — query and verify.
 - **Later:** M3 onward in order; Proof Loop (M5) deliberately lands before assemblies because it is
   what makes the project different.

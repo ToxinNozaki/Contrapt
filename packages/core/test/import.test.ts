@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto';
 import { test } from 'node:test';
 import {
   buildModel,
+  compileScript,
   describeStep,
   detectFormat,
   exportStep,
@@ -193,4 +194,13 @@ test('importing unsupported or missing files fails with an actionable message', 
 
   const missing = await buildModel(b.toJSON(), { files: provider({}) });
   assert.match(missing.report.steps[0]?.error ?? '', /no such file/);
+});
+
+test('script mode exposes the import step as importFile (import is reserved JavaScript)', async () => {
+  const step = await boxStep();
+  const tl = compileScript("importFile({ id: 'blk', file: 'box.step', scale: 2 });");
+  assert.equal(tl.steps[0]?.op, 'import');
+  const m = await buildModel(tl, { files: provider({ 'box.step': step }) });
+  assert.ok(m.report.ok, JSON.stringify(m.report.steps));
+  close(m.report.bodies.blk?.volume ?? 0, 8000 * 8);
 });

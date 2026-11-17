@@ -40,7 +40,7 @@ extrude {sketch, distance, symmetric?, mode?: new|add|cut, target?}  -- add/cut 
 fillet {target, radius, edges}   chamfer {target, distance, edges}   shell {target, thickness, faces}
 boolean {kind: union|cut|intersect, a, b}  -- consumes a and b, creates a new body with this step's id
 transform {target, translate?:[x,y,z], rotate?:{angle,axis,origin?}}
-Every step may carry id, label, suppressed. If you omit id one is generated (box1, extrude2 ...).
+In scripts the import step is called importFile(...) because 'import' is reserved JavaScript. Every step may carry id, label, suppressed. If you omit id one is generated (box1, extrude2 ...).
 A body's id is the id of the step that created it. fillet/chamfer/shell/extrude add|cut/transform
 modify their target body in place.`;
 

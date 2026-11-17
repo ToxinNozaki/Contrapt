@@ -7,4 +7,5 @@ export type { SessionOptions } from './session.ts';
 export { Session, type Snapshot } from './session.ts';
 export { TOOLS, type ToolContext, type ToolDef } from './tools.ts';
 export { convertTools } from './tools-convert.ts';
+export { renderTools } from './tools-render.ts';
 export { startViewer, type ViewerHandle, type ViewerOptions } from './viewer.ts';

@@ -43,7 +43,7 @@ summary: What Contrapt can read today (STEP), how to get Inventor/SolidWorks/Fus
 - The **embedded preview image** (a PNG, often 512×512), returned as a real image so you can look at it, and saved
   under `previews/`. This is one isometric view: it has no dimensions and hides back faces and internal features.
 - It does **not** read the geometry. If asked for dimensions or features, say so; do not estimate them from the picture
-  as if they were measured. Use the `recreate_from_reference` playbook to rebuild approximately, labelled as approximate.
+  as if they were measured. Use the `recreate_from_reference` playbook to rebuild approximately, labelled as approximate, and use `render_view` to compare your model with the preview.
 
 ## Converters that may read the geometry (status)
 An open-source command-line project (cadmpeg) advertises Inventor part/assembly decoding and STEP output, with a
