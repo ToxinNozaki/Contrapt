@@ -61,14 +61,21 @@ export function feedback(ctx: ToolContext, headline: string): string {
     ...(bad.length ? { error: { step: bad[0]?.id, message: bad[0]?.error } } : {}),
     steps:
       steps.length <= 14
-        ? steps.map((s) => ({
-            id: s.id,
-            op: s.op,
-            status: s.status,
-            ...(s.error ? { error: s.error } : {}),
-            ...(s.note ? { note: s.note } : {}),
-            ...(s.data ? { data: s.data } : {}),
-          }))
+        ? steps.map((s, i) => {
+            // Notes and solver data are shown for the newest step and for anything needing attention, so a long
+            // session does not repeat every old note on every reply (get_model has the full report).
+            const latest = i === steps.length - 1;
+            const attention =
+              !!s.note && /WARNING|under-constrained|over-constrained|redundant/.test(s.note);
+            return {
+              id: s.id,
+              op: s.op,
+              status: s.status,
+              ...(s.error ? { error: s.error } : {}),
+              ...(s.note && (latest || attention) ? { note: s.note } : {}),
+              ...(s.data && latest ? { data: s.data } : {}),
+            };
+          })
         : `${steps.filter((s) => s.status === 'ok').length}/${steps.length} ok (use get_model for details)`,
     params: report.params,
     bodies,

@@ -60,7 +60,7 @@ modify their target body in place.`;
 
 const selectors = `# Selecting edges and faces
 Edge selector (fillet/chamfer): {all:true} or any of {direction:'X'|'Y'|'Z' (edges parallel to the axis),
-  plane:{name,offset?} (edges lying in a plane), length (exact), box:{min,max} (entirely inside)}.
+  plane:{name,offset?} (edges lying in a plane), length (exact), lengthAtLeast / lengthAtMost (skip short hole/seam edges), curve:"line"|"circle", box:{min,max} (entirely inside)}.
   Criteria combine with AND.
 Face selector (shell: faces to remove/open): {plane:{name,offset?}} and/or {parallelTo:'XY'|'XZ'|'YZ'}.
 ALWAYS add \`expect: N\` to say how many you expect to match. If the count differs the step fails with a

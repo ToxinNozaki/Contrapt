@@ -42,6 +42,14 @@ Status: `[ ]` planned · `[~]` in progress · `[x]` done · `[-]` dropped (say w
 - [ ] Symmetric and midpoint constraints, reference dimensions, sketch on a face of an existing body - added 2026-11-17
 - [ ] Show constrained sketches in the viewer (dimension annotations, constraint glyphs, fully-defined colouring) - added 2026-11-17
 
+- [x] Hole start-point warnings; edge-selector filters lengthAtLeast/lengthAtMost/curve; readable messages for message-less kernel failures; leaner build replies (found by dogfooding, 2026-11-17)
+- [ ] Face-relative placement for holes and sketches (pick a face by normal/plane, give 2D coordinates on it) - Ideas Review #1, 2026-11-17
+- [ ] Edge/face classification selectors (convex, concave, outer, "created by step X") and named selections - Ideas Review #1
+- [ ] Materials library with density/modulus/yield/cost; mass, centre of mass and cost in measure - Ideas Review #1
+- [ ] `check_interference {a, b}` tool (exact overlap volume), pulled forward from M6 - Ideas Review #1
+- [ ] BIG BET (owner yes/no): section_properties + beam_check (analytic analysis on real sections), then the Proof Loop specs - Ideas Review #1
+- [ ] Viewer: constraint glyphs, selection highlight, click a step to focus it - Ideas Review #1
+
 ## P2 — Query and verify (the AI's eyes)
 
 - [~] Mass properties — volume, area, centre of mass done (2026-11-15); mass (needs materials) and inertia tensor pending

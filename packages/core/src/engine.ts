@@ -17,6 +17,7 @@ import {
   makeBox,
   makeCylinder,
   makeSphere,
+  measureVolume,
   Plane,
   type Shape3D,
   type Sketch,
@@ -172,7 +173,16 @@ const STANDARD_PLANE = { XY: 'XY', YX: 'XY', XZ: 'XZ', ZX: 'XZ', YZ: 'YZ', ZY: '
 
 // ---- selectors ----------------------------------------------------------------------------------
 function edgeFinder(sel: EdgeSelector, n: Ctx['n']) {
-  if (!sel.all && !sel.direction && !sel.plane && sel.length === undefined && !sel.box) {
+  if (
+    !sel.all &&
+    !sel.direction &&
+    !sel.plane &&
+    sel.length === undefined &&
+    sel.lengthAtLeast === undefined &&
+    sel.lengthAtMost === undefined &&
+    !sel.curve &&
+    !sel.box
+  ) {
     throw new Error('Empty edge selector: set all:true or give direction/plane/length/box');
   }
   return (f: EdgeFinder) => {
@@ -185,6 +195,15 @@ function edgeFinder(sel: EdgeSelector, n: Ctx['n']) {
           : r.inPlane(sel.plane.name, n(sel.plane.offset));
     }
     if (sel.length !== undefined) r = r.ofLength(n(sel.length));
+    if (sel.lengthAtLeast !== undefined) {
+      const min = n(sel.lengthAtLeast);
+      r = r.ofLength((l) => l >= min - 1e-9);
+    }
+    if (sel.lengthAtMost !== undefined) {
+      const max = n(sel.lengthAtMost);
+      r = r.ofLength((l) => l <= max + 1e-9);
+    }
+    if (sel.curve) r = r.ofCurveType(sel.curve === 'line' ? 'LINE' : 'CIRCLE');
     if (sel.box) {
       const lo = sel.box.min.map((v) => n(v));
       const hi = sel.box.max.map((v) => n(v));
@@ -486,7 +505,53 @@ async function runStep(step: Step, ctx: Ctx): Promise<StepInfo | undefined> {
       const pat = step.pattern ? numericPattern(step.pattern, n) : undefined;
       const positions = pat ? list.flatMap((p) => patternPositions(p, pat)) : list;
       const spec = { diameter, depth, counterbore, countersink };
-      for (const p of positions) t = t.cut(holeTool(spec, p, step.direction ?? '-Z'));
+      // Sanity-check the start points with tiny probe cubes: a hole should start ON the surface.
+      const dirName = step.direction ?? '-Z';
+      const dv = (
+        {
+          '+X': [1, 0, 0],
+          '-X': [-1, 0, 0],
+          '+Y': [0, 1, 0],
+          '-Y': [0, -1, 0],
+          '+Z': [0, 0, 1],
+          '-Z': [0, 0, -1],
+        } as Record<string, V3>
+      )[dirName] as V3;
+      const solidAt = (p: V3) => {
+        try {
+          const e = 0.01;
+          const probe = makeBox([p[0] - e, p[1] - e, p[2] - e], [p[0] + e, p[1] + e, p[2] + e]);
+          return measureVolume(probe.intersect(t)) > 1e-9;
+        } catch {
+          return false;
+        }
+      };
+      const fmt = (p: V3) => p.map((x) => Math.round(x * 100) / 100).join(', ');
+      const warnings: string[] = [];
+      const insideStart: boolean[] = [];
+      positions.slice(0, 6).forEach((p, i) => {
+        const ahead = solidAt([p[0] + dv[0] * 0.05, p[1] + dv[1] * 0.05, p[2] + dv[2] * 0.05]);
+        const behind = solidAt([p[0] - dv[0] * 0.05, p[1] - dv[1] * 0.05, p[2] - dv[2] * 0.05]);
+        insideStart[i] = ahead && behind;
+        if (ahead && behind) {
+          warnings.push(
+            `hole ${i + 1} starts INSIDE the material at (${fmt(p)}): start it on the surface, otherwise a counterbore/countersink and anything above that point are not cut`,
+          );
+        } else if (!ahead && behind) {
+          warnings.push(
+            `hole ${i + 1} is on the surface at (${fmt(p)}) but drills away from the part (direction ${dirName} points out of the material), so it cuts nothing: flip the direction`,
+          );
+        } else if (!ahead && !behind) {
+          warnings.push(
+            `hole ${i + 1} starts in empty space at (${fmt(p)}), not on the part, so it cuts nothing there: check the position`,
+          );
+        }
+      });
+      // the small stick-out above the start point only applies to starts ON the surface
+      positions.forEach((p, i) => {
+        const inside = insideStart[Math.min(i, insideStart.length - 1)] ?? false;
+        t = t.cut(holeTool(spec, p, step.direction ?? '-Z', inside ? 0 : 0.5));
+      });
       ctx.bodies.set(step.target, t);
       const kind = counterbore
         ? `counterbore \u00d8${counterbore.diameter} x ${counterbore.depth} deep`
@@ -497,7 +562,7 @@ async function runStep(step: Step, ctx: Ctx): Promise<StepInfo | undefined> {
         ? `${size} ${fit === 'tap' ? 'tap drill (cosmetic thread)' : fit + ' clearance'}`
         : 'custom diameter';
       return {
-        note: `${positions.length} hole(s) \u00d8${diameter} (${label}), ${kind}, ${through ? 'through' : `${depth} deep`}`,
+        note: `${warnings.length ? `WARNING: ${warnings.join('; ')}. ` : ''}${positions.length} hole(s) \u00d8${diameter} (${label}), ${kind}, ${through ? 'through' : `${depth} deep`}`,
       };
     }
     case 'pattern': {
@@ -637,6 +702,28 @@ async function runStep(step: Step, ctx: Ctx): Promise<StepInfo | undefined> {
   }
 }
 
+/**
+ * A readable message for any failure. The geometry kernel throws raw exception objects with NO message for
+ * invalid operations (for example a fillet that is too big, or chamfering a seam edge), which would otherwise
+ * reach the AI as a bare "error".
+ */
+function describeFailure(e: unknown, op: string): string {
+  const msg = e instanceof Error ? e.message : '';
+  if (msg) return msg;
+  const hint: Record<string, string> = {
+    fillet:
+      'the radius is probably too large for the faces, or the edges include seam/tangent edges (try a smaller radius, or select with lengthAtLeast / curve / box)',
+    chamfer:
+      'the distance is probably too large, or the edges include seam/tangent edges (try a smaller distance, or select with lengthAtLeast / curve / box)',
+    shell:
+      'the wall thickness is probably too large for the shape, or the removed face selection is wrong',
+    boolean: 'the two bodies may not overlap, or one is not a valid solid',
+    sweep: 'the profile may not fit the path (try a bigger bend radius or a smaller profile)',
+    loft: 'the sections may be too different, or not on separate planes/offsets',
+  };
+  return `The geometry kernel could not complete this ${op} step and gave no detail. ${hint[op] ? `Likely cause: ${hint[op]}.` : 'Check the inputs and try a simpler variant.'}`;
+}
+
 /** Build a timeline into geometry. Never throws for model errors: they appear in `report`. */
 export async function buildModel(timeline: Timeline, opts: BuildOptions = {}): Promise<Model> {
   await initKernel();
@@ -691,7 +778,7 @@ export async function buildModel(timeline: Timeline, opts: BuildOptions = {}): P
         id: step.id,
         op: step.op,
         status: 'error',
-        error: (e as Error).message,
+        error: describeFailure(e, step.op),
         ms: round(performance.now() - t0, 1),
       });
     }

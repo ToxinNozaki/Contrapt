@@ -5,7 +5,7 @@ the owner sets direction and approves big bets. Updated whenever scope, order, o
 never left to rot. Detail per feature lives in [FEATURES.md](FEATURES.md); the "why" lives in
 [DESIGN.md](DESIGN.md); what changed lives in [EDITLOG.md](EDITLOG.md).
 
-_Last updated: 2026-11-15 · Current milestone: **M2**_
+_Last updated: 2026-11-17 · Current milestone: **M3 closing, M2 owner steps pending** · Ideas Review #1 done_
 
 ## How this roadmap stays alive
 
@@ -126,8 +126,8 @@ goes from README to first modeled part in under five minutes.
 
 ## Now / Next / Later
 
-- **Now:** M2 wrap-up (npx build, HTTP transport, Claude Desktop/LM Studio checks) and M3 start. `render_view` done 2026-11-17.
-- **Next:** M3 — sketch constraints and part depth (revolve/sweep/loft, holes, patterns); M4 — query and verify.
+- **Now:** M3 closing out (sketch/part features done: revolve, loft, sweep, constrained sketches with arcs, holes, patterns, mirror); M2 owner steps (npm publish, Claude Desktop/LM Studio checks). Ideas Review #1 done 2026-11-17: see below.
+- **Next:** the small review items (materials and mass, check_interference, face-relative holes), then the two big bets once approved: analysis tools (section_properties + beam_check), then M5 Proof Loop.
 - **Later:** M3 onward in order; Proof Loop (M5) deliberately lands before assemblies because it is
   what makes the project different.
 
@@ -169,6 +169,36 @@ Each: _why it matters_ · size (S/M/L) · status. Big bets are marked 🎯 and n
   confident numbers are the biggest risk of an "engineering AI". · M · proposed
 - **Ship the packs as an agent skill** — a Claude skill bundle and a ChatGPT custom-instructions file generated from the
   same markdown. · S · proposed
+
+## Ideas Review #1 (2026-11-17), done at the end of M2 / most of M3
+
+**Method:** dogfooded a real design through the actual tool interface (an L-bracket for a 4 kg shelf: constrained profile, symmetric extrude,
+counterbored and countersunk M5 holes, fillets, renders, measure, STEP export), then compared with the field's AI-CAD projects.
+
+**What fought me, and what I did about it**
+| # | Finding (evidence) | Action |
+|---|---|---|
+| 1 | I placed wall holes at mid-thickness; the tool silently drilled a half-hole | **Fixed:** start-point probes warn (inside / empty space / drilling away); stick-out only on surface starts |
+| 2 | `direction: Y` matched 16 edges, not the 6 I meant (hole seams/rims) | **Fixed:** `lengthAtLeast`, `lengthAtMost`, `curve` selector filters |
+| 3 | A fillet that was too big returned a bare "error" (kernel throws a message-less object) | **Fixed:** every failure gets a readable message with a likely cause |
+| 4 | Every reply repeated all old step notes (token bloat) | **Fixed:** notes/data only for the newest step and for warnings |
+| 5 | I computed surface coordinates by hand (wall face at x=5, ...) | **Proposed (M):** face-relative placement: `hole` on a chosen face with 2D coordinates |
+| 6 | No material, mass or cost: mass = volume x density by hand | **Proposed (S-M):** materials library; mass, centre of mass and cost in `measure` |
+| 7 | "Will it hold 4 kg?" is a hand calculation | **BIG BET (see below)** |
+| 8 | The Proof Loop (the differentiator) is still not built | **BIG BET (see below)** |
+| 9 | Bracket, shelf and wall cannot be modelled together; no interference check | **Proposed (S, pull forward):** `check_interference {a, b}` using the exact boolean overlap volume; full assemblies stay in M6 |
+| 10 | The viewer shows no sketch constraints, no highlight of a body or step | **Proposed (M):** constraint glyphs, selection highlight, click a step to see it |
+| 11 | No drawing for the human who must build it | M10 (unchanged) |
+
+**Big bets: need the owner's yes/no 🎯**
+1. **Analysis without full FEA (M):** `section_properties` (exact cross-section area, centroid, second moment, section modulus at any cut) and
+   `beam_check` (analytic beam/cantilever with real sections, loads and supports: deflection, stress, safety factor), all validated against textbook
+   cases and labelled as hand-calculation-grade. It answers finding 7 honestly today and feeds specs tomorrow. Build before M5.
+2. **Start the Proof Loop (L):** requirements as code (`add_spec`, `check_specs`: mass, size, fit, and beam-check results), pass/fail with numbers after every
+   change, then the Design Journal and `optimize`. This is what makes the project different; everything above is groundwork for it.
+
+**Ideas promoted from the backlog:** ContraptBench stays in M11, but the dogfood script above is its seed: a scripted "design this, then score it" harness.
+**Dropped / deferred:** a native GUI editor (viewer stays read-only for now: AI-first); cloud sync.
 
 ## Risks and how we handle them
 

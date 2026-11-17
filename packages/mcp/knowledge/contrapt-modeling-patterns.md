@@ -32,6 +32,10 @@ solution: a very wrong starting layout can converge to a mirrored or twisted sha
 - **Order of operations:** sketch → extrude → fillet/chamfer outer edges → shell → drill holes. Fillet *before*
   cutting holes when you want only the outer corners (a hole's seam adds vertical edges); or use a
   `box` edge selector, and always add `expect: N`.
+- **Selecting edges after holes exist:** hole seams and rims also match `direction`/`plane`. Add `lengthAtLeast` (bend and outline
+  edges are long, seams are short), `curve: "circle"` for rims, or fillet BEFORE drilling. A fillet that fails with "could not complete" usually
+  means the radius is too big for the faces (a 3 mm fillet on both edges of a 5 mm wide end face cannot fit).
+- **Start holes ON the surface.** The hole step warns when a start point is inside the material, in empty space, or drills away from the part.
 - **Look at it:** call `render_view` (iso, top, front) after building. Numbers catch wrong sizes; pictures catch wrong shapes, missing features and mirrored layouts.
 - **Verify after each step:** compare the reported volume and bounding box to your hand calculation.
 - **Scripts can loop.** `run_script` is JavaScript: build patterns with `for` loops and `Math`.

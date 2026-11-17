@@ -30,7 +30,7 @@ export interface HoleSpec {
 }
 
 /** Build the tool for one hole, drilling toward -Z from the origin. */
-export function holeProfile(spec: HoleSpec): [number, number][] {
+export function holeProfile(spec: HoleSpec, up = 0.5): [number, number][] {
   const r = spec.diameter / 2;
   const d = spec.depth;
   if (spec.counterbore) {
@@ -40,8 +40,8 @@ export function holeProfile(spec: HoleSpec): [number, number][] {
     if (!(cd < d)) throw new Error('The counterbore depth must be less than the hole depth');
     // a little stick-out above the surface (z = +0.5) so the cut never leaves a skin
     return [
-      [0, 0.5],
-      [R, 0.5],
+      [0, up],
+      [R, up],
       [R, -cd],
       [r, -cd],
       [r, -d],
@@ -55,7 +55,6 @@ export function holeProfile(spec: HoleSpec): [number, number][] {
     const coneDepth = (R - r) / Math.tan(half);
     if (!(coneDepth < d)) throw new Error('The countersink is deeper than the hole');
     // extend the cone upward by the same slope for the stick-out
-    const up = 0.5;
     return [
       [0, up],
       [R + up * Math.tan(half), up],
@@ -65,8 +64,8 @@ export function holeProfile(spec: HoleSpec): [number, number][] {
     ];
   }
   return [
-    [0, 0.5],
-    [r, 0.5],
+    [0, up],
+    [r, up],
     [r, -d],
     [0, -d],
   ];
@@ -86,8 +85,10 @@ export function holeTool(
   spec: HoleSpec,
   at: [number, number, number],
   direction: Direction,
+  /** How far the tool sticks out above the start point (so a surface start never leaves a skin). */
+  up = 0.5,
 ): Shape3D {
-  const pts = holeProfile(spec);
+  const pts = holeProfile(spec, up);
   let pen = draw(pts[0] as [number, number]);
   for (const p of pts.slice(1)) pen = pen.lineTo(p);
   let tool = as3D(pen.close().sketchOnPlane('XZ').revolve('Z'), 'hole tool');

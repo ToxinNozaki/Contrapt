@@ -62,6 +62,12 @@ const EdgeSelector = z.object({
     .optional()
     .describe('edges lying in a plane'),
   length: Num.optional().describe('edges of exactly this length'),
+  lengthAtLeast: Num.optional().describe('edges at least this long (skips short hole/seam edges)'),
+  lengthAtMost: Num.optional().describe('edges at most this long'),
+  curve: z
+    .enum(['line', 'circle'])
+    .optional()
+    .describe('only straight edges, or only circular edges'),
   box: z
     .object({ min: Vec3, max: Vec3 })
     .optional()

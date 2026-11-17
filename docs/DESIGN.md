@@ -2,7 +2,12 @@
 
 > **Where we left off** (update this at every stop)
 > - **Date:** 2026-11-17 (session resumed; render_view added; header below partly historical, newest first)
-> - **Newest:** `render_view` (pure-JS renderer, PNG images to the AI) built and tested; Inventor files convert via cadmpeg and import exactly (see EDITLOG). Next: M3 (sketch constraints, revolve/sweep/loft), then finish M2 (npx build, HTTP transport).
+> - **Newest (2026-11-17, end of session 2):** M3 part-modelling is feature-complete for now: revolve, loft, sweep (bent paths), constrained sketches with arcs
+>   (FreeCAD solver; reports degrees of freedom and conflicts), holes (M2-M10 sizes, counterbore/countersink, warnings), patterns, mirror. Also: render_view (AI can see),
+>   HTTP transport (token + host protection), publishable `contrapt` package with a clean-install smoke test in CI, Inventor files convert and import exactly (cadmpeg).
+>   **Ideas Review #1 done** (ROADMAP.md): dogfooded a real bracket, fixed 4 frictions, listed proposals. 101 core + 63 mcp tests; CI green on Node 22 and 24.
+> - **Waiting on the owner:** (1) yes/no on two big bets: analysis tools (section_properties + beam_check) and starting the Proof Loop; (2) npm publish and real Claude Desktop/LM Studio checks.
+> - **Next (my plan if no objection):** materials + mass, check_interference, face-relative holes; then the big bets.
 > - **Phase:** M0, M1 done; **M2 (MCP server + live viewer) about 85%** — built and tested; real-client verification and `npx` build remain.
 > - **Last thing done:** M2: MCP server (13 tools, stdio) + live three.js viewer + SETUP.md. 55 tests pass,
 >   incl. a real stdio subprocess test. Viewer screenshot-verified; demo bracket volume matches hand calc.
