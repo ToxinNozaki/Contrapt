@@ -16,7 +16,7 @@ Status: `[ ]` planned · `[~]` in progress · `[x]` done · `[-]` dropped (say w
 
 ## P1 — Sketch and part modeling
 
-- [~] Sketch entities: line, circle, rectangle, polygon, ngon, point done (2026-11-17); arc, ellipse, slot, spline pending
+- [~] Sketch entities: line, arc, circle, rectangle, polygon, ngon, point done (arcs in constrained sketches 2026-11-17); ellipse, slot (as one item), spline pending
 - [x] **Constrained sketches (FreeCAD planegcs solver, ~0.5 MB WASM)** - `constrained_sketch` step, 2026-11-17: fix, x/y, coincident, horizontal, vertical, distance, parallel, perpendicular, equalLength, angle, radius, diameter, equalRadius, onLine, onCircle, tangent (line-circle, circle-circle); parameter-driven values; reports degrees of freedom, names conflicting and redundant constraints; solved geometry returned; 13 tests with closed-form checks. Arcs, midpoint/symmetric, driven (reference) dimensions pending
 - [ ] (original line, partly done above) Constraints: coincident, horizontal, vertical, parallel, perpendicular, tangent, equal,
       concentric, midpoint, symmetric, fix; dimensions: distance, angle, radius/diameter
@@ -38,7 +38,8 @@ Status: `[ ]` planned · `[~]` in progress · `[x]` done · `[-]` dropped (say w
 - [ ] More primitives in the timeline: cone, torus, ellipsoid, wedge, text — added 2026-11-15
 - [~] Revolve and loft are timeline ops now (2026-11-17); sweep still needs a path definition (polyline/arc spine) in the schema — added 2026-11-15
 
-- [ ] Arcs in constrained sketches (center/start/end with arc_rules), symmetric and midpoint constraints, reference dimensions, sketch on a face of an existing body - added 2026-11-17
+- [x] Arcs in constrained sketches (centre/start/end, ccw; radius/diameter, onCircle, tangent line-arc / arc-arc / circle-arc; mixed line+arc loops, either direction) - 2026-11-17
+- [ ] Symmetric and midpoint constraints, reference dimensions, sketch on a face of an existing body - added 2026-11-17
 - [ ] Show constrained sketches in the viewer (dimension annotations, constraint glyphs, fully-defined colouring) - added 2026-11-17
 
 ## P2 — Query and verify (the AI's eyes)

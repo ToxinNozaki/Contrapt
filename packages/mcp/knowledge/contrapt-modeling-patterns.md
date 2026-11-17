@@ -20,6 +20,8 @@ The solver moves the points to satisfy them. Workflow that works:
 3. Read the step note: **"fully constrained (0 degrees of freedom)"** is the goal. "Under-constrained: N degree(s) left" means N
    dimensions can still move: add them. A **conflict** names the contradicting constraints: remove or change one.
 4. Use parameters in `value` (for example `"width/2"`) so changing one number re-solves the whole sketch.
+Arcs: name the centre, start and end as points; the arc runs counter-clockwise from start to end. Slots and rounded corners need a
+`tangent` between each line and the arc beside it (otherwise the report shows free degrees of freedom).
 Solved point positions are returned in the step data, so you can check them against your hand numbers. Keep points near the intended
 solution: a very wrong starting layout can converge to a mirrored or twisted shape.
 
@@ -56,7 +58,7 @@ the assembly, then `measure` each body and check clearances by comparing boundin
 Mirror or symmetric parts: `symmetric: true` on extrude, or compute mirrored positions in a script loop (there is no copy/mirror step yet, and `transform` moves a body, it does not duplicate it).
 
 ## What does not exist yet (do not pretend it does)
-- Arcs and splines in sketches (constrained sketches support lines and circles; arcs are planned).
+- Splines and ellipses in sketches (constrained sketches support lines, arcs and circles).
 - Sweep, draft, thread features, ribs, patterns/mirror as one-click features.
 - Assemblies with joints and mates; motion studies.
 - Stress/modal/thermal simulation; interference checks and wall-thickness analysis (coming in later milestones).

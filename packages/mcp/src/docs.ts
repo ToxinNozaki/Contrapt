@@ -36,11 +36,11 @@ const steps = `# Steps (op values)
 box {w,d,h,at?}  cylinder {r,h,at?,axis?}  sphere {r,at?}
 sketch {plane, offset?, profile:[items]}  -- profile items: rect {w,h,cx?,cy?,cornerRadius?},
   circle {r,cx?,cy?}, polygon {points:[[x,y]...]}, ngon {sides,r,cx?,cy?}. Add "cut":true to subtract an item.
-constrained_sketch {plane, offset?, points:{A:[x,y],...}, lines:{AB:['A','B'],...}, circles:{c:{center:'A', r}}, constraints:[{type,a,b?,value?,at?}], profile:[{loop:[line names], cut?} | {circle:name, cut?}]}
+constrained_sketch {plane, offset?, points:{A:[x,y],...}, lines:{AB:['A','B'],...}, arcs:{a:{center:'O', start:'S', end:'E'}} (counter-clockwise from start to end; the three are named points), circles:{c:{center:'A', r}}, constraints:[{type,a,b?,value?,at?}], profile:[{loop:[line names], cut?} | {circle:name, cut?}]}
   -- a sketch driven by dimensions and relations instead of coordinates. Give ROUGH starting positions; the solver snaps them to
   satisfy the constraints. Constraint types: fix (a=point, at?), x / y (a=point, value), coincident (a,b points), horizontal / vertical
   (a=line, or a,b=points), distance (a,b points, value), parallel / perpendicular / equalLength (a,b lines), angle (a,b lines, value degrees),
-  radius / diameter (a=circle, value), equalRadius (a,b circles), onLine (a=point, b=line), onCircle (a=point, b=circle), tangent (a=line,b=circle or both circles).
+  radius / diameter (a=circle or arc, value), equalRadius (a,b circles), onLine (a=point, b=line), onCircle (a=point, b=circle or arc), tangent (line-circle, line-arc, circle-circle, arc-arc, circle-arc). Profile loops may mix line and arc names; an arc and the lines next to it share its start/end points, which is how they connect.
   Values may be expressions over parameters. The report says "fully constrained (0 degrees of freedom)" or how many dimensions are still free,
   and names conflicting constraints. Pin one point with fix, give every shape a size, and aim for 0 degrees of freedom.
 extrude {sketch, distance, symmetric?, mode?: new|add|cut, target?}  -- add/cut modify \`target\` in place

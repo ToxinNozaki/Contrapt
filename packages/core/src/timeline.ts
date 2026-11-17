@@ -130,6 +130,10 @@ export const StepInput = z.discriminatedUnion('op', [
       .record(EntityName, z.tuple([EntityName, EntityName]))
       .optional()
       .describe('named lines between two points'),
+    arcs: z
+      .record(EntityName, z.object({ center: EntityName, start: EntityName, end: EntityName }))
+      .optional()
+      .describe('named counter-clockwise arcs from start to end around center (all named points)'),
     circles: z
       .record(EntityName, z.object({ center: EntityName, r: z.number().positive() }))
       .optional()

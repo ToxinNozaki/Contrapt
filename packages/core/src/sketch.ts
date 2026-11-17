@@ -54,16 +54,29 @@ export interface NumericConstraint {
   at?: [number, number];
 }
 
+export interface ArcGeometry {
+  cx: number;
+  cy: number;
+  r: number;
+  start: [number, number];
+  end: [number, number];
+  /** A point halfway along the arc (used to draw it). */
+  mid: [number, number];
+}
+
 export interface SolveInput {
   points: Record<string, [number, number]>;
   lines: Record<string, [string, string]>;
   circles: Record<string, { center: string; r: number }>;
+  /** Counter-clockwise arcs from `start` to `end` around `center` (all three are named points). */
+  arcs?: Record<string, { center: string; start: string; end: string }>;
   constraints: NumericConstraint[];
 }
 
 export interface SolveOutput {
   points: Record<string, [number, number]>;
   circles: Record<string, { cx: number; cy: number; r: number }>;
+  arcs: Record<string, ArcGeometry>;
   /** Remaining degrees of freedom: 0 = fully defined, >0 = under-constrained, <0 = over-constrained. */
   dof: number;
   /** Indices (into the input constraints) that contradict each other. */
@@ -115,8 +128,8 @@ const round = (x: number) => Math.round(x * 1e6) / 1e6;
 
 export async function solveSketch(input: SolveInput): Promise<SolveOutput> {
   const names = new Set<string>();
-  const kind = new Map<string, 'point' | 'line' | 'circle'>();
-  const declare = (name: string, k: 'point' | 'line' | 'circle') => {
+  const kind = new Map<string, 'point' | 'line' | 'circle' | 'arc'>();
+  const declare = (name: string, k: 'point' | 'line' | 'circle' | 'arc') => {
     if (names.has(name))
       throw new Error(
         `The name "${name}" is used twice. Points, lines and circles need unique names.`,
@@ -127,8 +140,13 @@ export async function solveSketch(input: SolveInput): Promise<SolveOutput> {
   for (const n of Object.keys(input.points)) declare(n, 'point');
   for (const n of Object.keys(input.lines)) declare(n, 'line');
   for (const n of Object.keys(input.circles)) declare(n, 'circle');
+  for (const n of Object.keys(input.arcs ?? {})) declare(n, 'arc');
 
-  const need = (name: string | undefined, k: 'point' | 'line' | 'circle', ctx: string): string => {
+  const need = (
+    name: string | undefined,
+    k: 'point' | 'line' | 'circle' | 'arc',
+    ctx: string,
+  ): string => {
     if (!name) throw new Error(`${ctx} is missing a name`);
     const got = kind.get(name);
     if (!got)
@@ -141,6 +159,7 @@ export async function solveSketch(input: SolveInput): Promise<SolveOutput> {
   const P = (n: string) => `P_${n}`;
   const L = (n: string) => `L_${n}`;
   const C = (n: string) => `C_${n}`;
+  const A = (n: string) => `A_${n}`;
 
   // geometry first (planegcs requires referenced points to come first)
   const prims: Record<string, unknown>[] = [];
@@ -154,6 +173,26 @@ export async function solveSketch(input: SolveInput): Promise<SolveOutput> {
   for (const [n, c] of Object.entries(input.circles)) {
     need(c.center, 'point', `circle ${n}`);
     prims.push({ id: C(n), type: 'circle', c_id: P(c.center), radius: c.r });
+  }
+
+  for (const [n, a] of Object.entries(input.arcs ?? {})) {
+    const c = input.points[need(a.center, 'point', `arc ${n}`)] as [number, number];
+    const s = input.points[need(a.start, 'point', `arc ${n}`)] as [number, number];
+    const e = input.points[need(a.end, 'point', `arc ${n}`)] as [number, number];
+    const startAngle = Math.atan2(s[1] - c[1], s[0] - c[0]);
+    let endAngle = Math.atan2(e[1] - c[1], e[0] - c[0]);
+    while (endAngle <= startAngle) endAngle += 2 * Math.PI;
+    prims.push({
+      id: A(n),
+      type: 'arc',
+      c_id: P(a.center),
+      radius: Math.hypot(s[0] - c[0], s[1] - c[1]) || 1,
+      start_angle: startAngle,
+      end_angle: endAngle,
+      start_id: P(a.start),
+      end_id: P(a.end),
+    });
+    prims.push({ id: `AR_${n}`, type: 'arc_rules', a_id: A(n) });
   }
 
   // constraints; remember which planegcs ids belong to which input index
@@ -242,10 +281,14 @@ export async function solveSketch(input: SolveInput): Promise<SolveOutput> {
         });
         break;
       case 'radius':
-        push(i, { type: 'circle_radius', c_id: C(need(c.a, 'circle', ctx)), radius: val() });
+        if (kind.get(c.a) === 'arc') push(i, { type: 'arc_radius', a_id: A(c.a), radius: val() });
+        else push(i, { type: 'circle_radius', c_id: C(need(c.a, 'circle', ctx)), radius: val() });
         break;
       case 'diameter':
-        push(i, { type: 'circle_diameter', c_id: C(need(c.a, 'circle', ctx)), diameter: val() });
+        if (kind.get(c.a) === 'arc')
+          push(i, { type: 'arc_diameter', a_id: A(c.a), diameter: val() });
+        else
+          push(i, { type: 'circle_diameter', c_id: C(need(c.a, 'circle', ctx)), diameter: val() });
         break;
       case 'equalRadius':
         push(i, {
@@ -262,14 +305,34 @@ export async function solveSketch(input: SolveInput): Promise<SolveOutput> {
         });
         break;
       case 'onCircle':
-        push(i, {
-          type: 'point_on_circle',
-          p_id: P(need(c.a, 'point', ctx)),
-          c_id: C(need(c.b, 'circle', ctx)),
-        });
+        if (kind.get(c.b ?? '') === 'arc') {
+          push(i, {
+            type: 'point_on_arc',
+            p_id: P(need(c.a, 'point', ctx)),
+            a_id: A(need(c.b, 'arc', ctx)),
+          });
+        } else {
+          push(i, {
+            type: 'point_on_circle',
+            p_id: P(need(c.a, 'point', ctx)),
+            c_id: C(need(c.b, 'circle', ctx)),
+          });
+        }
         break;
-      case 'tangent':
-        if (kind.get(c.a) === 'line')
+      case 'tangent': {
+        const ka = kind.get(c.a);
+        const kb = kind.get(c.b ?? '');
+        if (ka === 'line' && kb === 'arc')
+          push(i, { type: 'tangent_la', l_id: L(c.a), a_id: A(c.b as string) });
+        else if (ka === 'arc' && kb === 'line')
+          push(i, { type: 'tangent_la', l_id: L(c.b as string), a_id: A(c.a) });
+        else if (ka === 'arc' && kb === 'arc')
+          push(i, { type: 'tangent_aa', a1_id: A(c.a), a2_id: A(c.b as string) });
+        else if (ka === 'circle' && kb === 'arc')
+          push(i, { type: 'tangent_ca', c_id: C(c.a), a_id: A(c.b as string) });
+        else if (ka === 'arc' && kb === 'circle')
+          push(i, { type: 'tangent_ca', c_id: C(c.b as string), a_id: A(c.a) });
+        else if (ka === 'line')
           push(i, { type: 'tangent_lc', l_id: L(c.a), c_id: C(need(c.b, 'circle', ctx)) });
         else
           push(i, {
@@ -278,6 +341,7 @@ export async function solveSketch(input: SolveInput): Promise<SolveOutput> {
             c2_id: C(need(c.b, 'circle', ctx)),
           });
         break;
+      }
     }
   });
 
@@ -313,9 +377,29 @@ export async function solveSketch(input: SolveInput): Promise<SolveOutput> {
       const [cx, cy] = points[c.center] as [number, number];
       circles[n] = { cx, cy, r: round(prim?.radius ?? c.r) };
     }
+    const arcs: SolveOutput['arcs'] = {};
+    for (const [n, a] of Object.entries(input.arcs ?? {})) {
+      const [cx, cy] = points[a.center] as [number, number];
+      const s = points[a.start] as [number, number];
+      const e = points[a.end] as [number, number];
+      const r = Math.hypot(s[0] - cx, s[1] - cy);
+      const sa = Math.atan2(s[1] - cy, s[0] - cx);
+      let sweep = Math.atan2(e[1] - cy, e[0] - cx) - sa;
+      while (sweep <= 1e-9) sweep += 2 * Math.PI;
+      const ma = sa + sweep / 2;
+      arcs[n] = {
+        cx,
+        cy,
+        r: round(r),
+        start: s,
+        end: e,
+        mid: [round(cx + r * Math.cos(ma)), round(cy + r * Math.sin(ma))],
+      };
+    }
     return {
       points,
       circles,
+      arcs,
       dof,
       conflicting,
       redundant,
@@ -362,4 +446,57 @@ export function loopToPolygon(
     if (!p) throw new Error(`Unknown point "${n}"`);
     return p;
   });
+}
+
+export type PathSeg =
+  | { kind: 'line'; to: [number, number] }
+  | { kind: 'arc'; to: [number, number]; via: [number, number] };
+
+/** Order a closed loop of lines AND arcs into a drawable path, checking that it connects and closes. */
+export function loopToPath(
+  loop: string[],
+  lines: Record<string, [string, string]>,
+  arcs: Record<string, { center: string; start: string; end: string }>,
+  points: Record<string, [number, number]>,
+  arcGeometry: Record<string, ArcGeometry>,
+): { start: [number, number]; segs: PathSeg[] } {
+  const ends = (name: string): [string, string] => {
+    const l = lines[name];
+    if (l) return l;
+    const a = arcs[name];
+    if (a) return [a.start, a.end];
+    throw new Error(
+      `Loop uses "${name}", which is neither a line nor an arc. Lines: ${Object.keys(lines).join(', ') || '(none)'}; arcs: ${Object.keys(arcs).join(', ') || '(none)'}`,
+    );
+  };
+  const pt = (n: string): [number, number] => {
+    const p = points[n];
+    if (!p) throw new Error(`Unknown point "${n}"`);
+    return p;
+  };
+  const [a0, b0] = ends(loop[0] as string);
+  const segs: PathSeg[] = [];
+  const add = (name: string, to: string) => {
+    const g = arcGeometry[name];
+    segs.push(g ? { kind: 'arc', to: pt(to), via: g.mid } : { kind: 'line', to: pt(to) });
+  };
+  add(loop[0] as string, b0);
+  let end = b0;
+  for (const name of loop.slice(1)) {
+    const [p, q] = ends(name);
+    if (p === end) {
+      add(name, q);
+      end = q;
+    } else if (q === end) {
+      add(name, p);
+      end = p;
+    } else {
+      throw new Error(
+        `Loop is not connected: "${name}" does not touch the end of the previous segment (point "${end}").`,
+      );
+    }
+  }
+  if (end !== a0)
+    throw new Error(`Loop does not close: it ends at "${end}" but started at "${a0}".`);
+  return { start: pt(a0), segs };
 }

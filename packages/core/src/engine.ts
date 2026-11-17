@@ -24,7 +24,7 @@ import { detectFormat } from './import.ts';
 import { initKernel } from './kernel.ts';
 import { type BodyInfo, describeBody } from './measure.ts';
 import { as3D } from './shapes.ts';
-import { loopToPolygon, solveSketch } from './sketch.ts';
+import { loopToPath, loopToPolygon, type PathSeg, solveSketch } from './sketch.ts';
 import type { EdgeSelector, FaceSelector, ProfileItem, Step, Timeline } from './timeline.ts';
 
 export interface StepReport {
@@ -108,9 +108,19 @@ const get = (ctx: Ctx, id: string, what = 'body'): Shape3D => {
 };
 
 // ---- profiles -----------------------------------------------------------------------------------
-function itemDrawing(item: ProfileItem, n: Ctx['n']): Drawing {
-  const cx = item.shape === 'polygon' ? 0 : n(item.cx ?? 0);
-  const cy = item.shape === 'polygon' ? 0 : n(item.cy ?? 0);
+/** Internal profile item: a closed path of lines and arcs (from a solved constrained sketch). */
+interface PathItem {
+  shape: 'path';
+  start: [number, number];
+  segs: PathSeg[];
+  cut?: boolean;
+}
+type DrawItem = ProfileItem | PathItem;
+
+function itemDrawing(item: DrawItem, n: Ctx['n']): Drawing {
+  const hasCenter = item.shape !== 'polygon' && item.shape !== 'path';
+  const cx = hasCenter ? n(item.cx ?? 0) : 0;
+  const cy = hasCenter ? n(item.cy ?? 0) : 0;
   switch (item.shape) {
     case 'rect': {
       const w = n(item.w);
@@ -123,6 +133,12 @@ function itemDrawing(item: ProfileItem, n: Ctx['n']): Drawing {
       return drawCircle(n(item.r)).translate(cx, cy);
     case 'ngon':
       return drawPolysides(n(item.r), item.sides).translate(cx, cy);
+    case 'path': {
+      let pen = draw(item.start);
+      for (const sg of item.segs)
+        pen = sg.kind === 'line' ? pen.lineTo(sg.to) : pen.threePointsArcTo(sg.to, sg.via);
+      return pen.close();
+    }
     case 'polygon': {
       const pts = item.points.map(([x, y]) => [n(x), n(y)] as [number, number]);
       const first = pts[0] as [number, number];
@@ -133,7 +149,7 @@ function itemDrawing(item: ProfileItem, n: Ctx['n']): Drawing {
   }
 }
 
-function profileDrawing(items: ProfileItem[], n: Ctx['n']): Drawing {
+function profileDrawing(items: DrawItem[], n: Ctx['n']): Drawing {
   let acc: Drawing | undefined;
   for (const it of items.filter((i) => !i.cut)) {
     const d = itemDrawing(it, n);
@@ -251,6 +267,7 @@ async function runStep(step: Step, ctx: Ctx): Promise<StepInfo | undefined> {
         points: step.points,
         lines: step.lines ?? {},
         circles: step.circles ?? {},
+        arcs: step.arcs ?? {},
         constraints: step.constraints.map((c) => ({
           type: c.type,
           a: c.a,
@@ -273,7 +290,11 @@ async function runStep(step: Step, ctx: Ctx): Promise<StepInfo | undefined> {
             : 'The solver could not satisfy the constraints from these starting positions. Move the starting points closer to the intended shape, or relax a constraint.',
         );
       }
-      const items: ProfileItem[] = step.profile.map((p) => {
+      const items: DrawItem[] = step.profile.map((p) => {
+        if ('loop' in p && p.loop.some((nm) => step.arcs?.[nm])) {
+          const path = loopToPath(p.loop, step.lines ?? {}, step.arcs ?? {}, out.points, out.arcs);
+          return { shape: 'path', start: path.start, segs: path.segs, cut: p.cut };
+        }
         if ('loop' in p) {
           return {
             shape: 'polygon',
