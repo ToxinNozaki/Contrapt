@@ -1,10 +1,12 @@
 #!/usr/bin/env node
 // contrapt-mcp: MCP server over stdio + live viewer on localhost.
 //   node packages/mcp/src/cli.ts [--no-viewer] [--port 4317] [--out ./contrapt-out]
+//   node packages/mcp/src/cli.ts --http [4318] [--token SECRET] [--allow-host my.tunnel.example]   (MCP over HTTP instead of stdio)
 // stdout is reserved for the MCP protocol; all human-readable output goes to stderr.
 import { join, resolve } from 'node:path';
 import { initKernel } from '@contrapt/core';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { startHttp } from './http.ts';
 import { createMcpServer } from './server.ts';
 import { Session } from './session.ts';
 import { startViewer } from './viewer.ts';
@@ -35,11 +37,37 @@ if (!process.argv.includes('--no-viewer')) {
 const cadmpeg = arg('--cadmpeg') ?? process.env.CONTRAPT_CADMPEG;
 if (cadmpeg) log(`converter enabled: ${cadmpeg}`);
 
-const server = createMcpServer({
+const toolContext = {
   session,
   outDir,
   viewerUrl: () => viewerUrl,
   converters: cadmpeg ? { cadmpeg: { command: resolve(cadmpeg) } } : undefined,
-});
-await server.connect(new StdioServerTransport());
-log('MCP server ready on stdio');
+};
+
+function all(name: string): string[] {
+  const out: string[] = [];
+  process.argv.forEach((a, i) => {
+    if (a === name && process.argv[i + 1]) out.push(process.argv[i + 1] as string);
+  });
+  return out;
+}
+
+if (process.argv.includes('--http')) {
+  // Streamable HTTP for clients that cannot spawn a local process (ChatGPT via a tunnel you set up, web apps).
+  const next = process.argv[process.argv.indexOf('--http') + 1];
+  const port = next && /^\d+$/.test(next) ? Number(next) : undefined;
+  const http = await startHttp(toolContext, {
+    port,
+    token: arg('--token') ?? process.env.CONTRAPT_TOKEN,
+    allowedHosts: all('--allow-host'),
+    allowedOrigins: all('--allow-origin'),
+  });
+  log(
+    `MCP over HTTP: ${http.url}${arg('--token') || process.env.CONTRAPT_TOKEN ? ' (bearer token required)' : ''}`,
+  );
+  process.on('exit', () => void http.close());
+} else {
+  const server = createMcpServer(toolContext);
+  await server.connect(new StdioServerTransport());
+  log('MCP server ready on stdio');
+}

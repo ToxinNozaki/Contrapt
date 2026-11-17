@@ -138,7 +138,7 @@ Status: `[ ]` planned · `[~]` in progress · `[x]` done · `[-]` dropped (say w
 
 ## P9 — MCP and AI integration
 
-- [~] MCP server — stdio done with 13 tools (2026-11-15), tested in-memory and over a real stdio subprocess; streamable HTTP pending
+- [x] MCP server: stdio (tested in-memory and over a real subprocess) and streamable HTTP (2026-11-17): sessions, bearer token, Host/Origin checks, body cap, shared design across clients, refuses non-local hosts without a token; tested with the SDK client. NOT yet tried with ChatGPT itself
 - [~] MCP docs resource (contrapt://docs) done (2026-11-15); model-state resource, materials/parts library, and prompts pending
 - [ ] Agent skill / system-prompt pack for Claude, ChatGPT, and local models
 - [ ] OpenAI-style function-calling adapter and REST endpoint
@@ -158,7 +158,7 @@ Status: `[ ]` planned · `[~]` in progress · `[x]` done · `[-]` dropped (say w
 - [ ] Scene presets (workshop, studio, outdoors)
 
 - [ ] Verify the stdio server inside real Claude Desktop, Claude Code and LM Studio and record results — added 2026-11-15
-- [ ] Streamable HTTP MCP transport (needed for ChatGPT and other remote-only clients) — added 2026-11-15
+- [x] Streamable HTTP MCP transport — built 2026-11-17 (verify with ChatGPT and OAuth-style auth if required)
 - [ ] Publishable build: compile TS to dist so `npx contrapt` works (Node refuses to run .ts inside node_modules) — added 2026-11-15
 - [ ] Per-op convenience tools (add_box, add_fillet, ...) if weaker/local models struggle with the generic add_step — added 2026-11-15
 - [ ] Viewer: click a body to highlight its step, hover to read dimensions, section plane, themes toggle — added 2026-11-15

@@ -62,7 +62,7 @@ timeline and identical geometry (golden tests); editing a parameter rebuilds cor
 stdio + HTTP MCP server; browser viewer on localhost showing the AI's work live. **Done when:** from a
 clean clone, one command starts it, Claude Desktop/Claude Code connect, and "make a bracket with four
 mounting holes" appears in the viewer and exports to STEP. Includes first setup guides.
-_Status:_ server (13 tools), live viewer, and SETUP.md are built and tested (16 MCP tests, incl. a real stdio subprocess). **Also added:** 18 engineering knowledge packs and 10 playbooks (advanced prompts) as MCP prompts, resources and tools; STEP import with format detection for ~25 CAD formats. Verified in real Claude Code (`claude mcp list`: Connected). **Remaining:** Claude Desktop and LM Studio checks; publishable `npx` build; HTTP transport.
+_Status:_ server (13 tools), live viewer, and SETUP.md are built and tested (16 MCP tests, incl. a real stdio subprocess). **Also added:** 18 engineering knowledge packs and 10 playbooks (advanced prompts) as MCP prompts, resources and tools; STEP import with format detection for ~25 CAD formats. Verified in real Claude Code (`claude mcp list`: Connected). **Remaining:** Claude Desktop and LM Studio checks; publishable `npx` build. (HTTP transport done 2026-11-17.)
 
 ### M3 — Sketch and part depth ☐
 

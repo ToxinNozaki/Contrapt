@@ -75,11 +75,30 @@ Apps that support MCP servers over stdio (LM Studio, and most editors with MCP s
 `command` and `args` as above in their MCP settings file (often `mcp.json`). Local models work best with a
 tool-calling model of at least 7B parameters; smaller models tend to struggle with the exact step format.
 
-### ChatGPT and other remote-only apps
+### ChatGPT and other remote apps (MCP over HTTP)
 
-These connect to MCP servers over the internet (HTTP), not local stdio, and Contrapt does not have an HTTP
-transport yet. It is on the roadmap (see [FEATURES.md](FEATURES.md), P9). Until then, use a client that
-supports local stdio servers.
+Some apps only talk to MCP servers over HTTP. Contrapt can serve MCP that way:
+
+```bash
+node /path/to/Contrapt/packages/mcp/src/cli.ts --http 4318
+```
+
+The endpoint is `http://localhost:4318/mcp`. It listens on your computer only, accepts only `localhost` as the Host, and
+all connected clients share the one live design (so the viewer shows everything).
+
+**Reaching it from the internet is your decision and needs a secret.** A remote app cannot see `localhost`, so you would run a
+tunnel yourself (for example Cloudflare Tunnel or ngrok) and then start Contrapt with the tunnel's host name and a token:
+
+```bash
+node /path/to/Contrapt/packages/mcp/src/cli.ts --http 4318 --token "a-long-random-secret" --allow-host my-tunnel.example.com
+```
+
+Contrapt **refuses to start** with `--allow-host` and no token, because an open public server would let anyone edit your models and
+write files in your output folder. Clients must send `Authorization: Bearer <token>`.
+
+> **Honest status:** the HTTP transport is tested with the official MCP client library (sessions, token, host and origin checks).
+> It has **not** been tried with ChatGPT itself. ChatGPT's connector settings decide which authentication styles they accept, and a
+> plain bearer token may not be one of them. If you try it, please report what you find.
 
 ## 4. First prompts to try
 
