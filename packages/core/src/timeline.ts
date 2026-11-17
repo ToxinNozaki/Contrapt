@@ -152,6 +152,21 @@ export const StepInput = z.discriminatedUnion('op', [
     mode: Mode.optional(),
     target: Id.optional(),
   }),
+  z.object({
+    ...base,
+    op: z.literal('loft'),
+    sketches: z
+      .array(Id)
+      .min(2)
+      .max(12)
+      .describe('sketch ids in order; each sits on its own plane/offset'),
+    ruled: z
+      .boolean()
+      .optional()
+      .describe('straight transitions between sections instead of smooth'),
+    mode: Mode.optional(),
+    target: Id.optional(),
+  }),
   z.object({ ...base, op: z.literal('fillet'), target: Id, radius: Num, edges: EdgeSelector }),
   z.object({ ...base, op: z.literal('chamfer'), target: Id, distance: Num, edges: EdgeSelector }),
   z.object({ ...base, op: z.literal('shell'), target: Id, thickness: Num, faces: FaceSelector }),

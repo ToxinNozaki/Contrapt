@@ -366,3 +366,75 @@ test('revolve validates its inputs', async () => {
   const m2 = await buildModel(noTarget.toJSON());
   assert.match(m2.report.steps.find((x) => x.id === 'x')?.error ?? '', /needs a target/);
 });
+
+test('loft matches closed-form frustum, cone-frustum, prism and 3-section volumes', async () => {
+  const loft = async (
+    sections: { shape: 'rect' | 'circle'; w?: number; h?: number; r?: number }[],
+    ruled?: boolean,
+  ) => {
+    const b = new ModelBuilder();
+    const ids = sections.map((s, i) =>
+      b.add({ op: 'sketch', plane: 'XY', offset: i * 10, profile: [s] }),
+    );
+    b.add({ op: 'loft', id: 'l', sketches: ids, ...(ruled === undefined ? {} : { ruled }) });
+    const m = await buildModel(b.toJSON());
+    assert.ok(m.report.ok, JSON.stringify(m.report.steps));
+    return m.report.bodies.l;
+  };
+  const r = (w: number) => ({ shape: 'rect' as const, w, h: w });
+  close((await loft([r(20), r(10)], true))?.volume ?? 0, (10 / 3) * (400 + 100 + 200), 1e-2);
+  close(
+    (
+      await loft([
+        { shape: 'circle', r: 10 },
+        { shape: 'circle', r: 5 },
+      ])
+    )?.volume ?? 0,
+    ((Math.PI * 10) / 3) * (100 + 50 + 25),
+    1e-2,
+  );
+  close((await loft([r(20), r(20)]))?.volume ?? 0, 4000, 1e-2);
+  const three = await loft([r(20), r(10), r(20)], true);
+  close(three?.volume ?? 0, 2 * (10 / 3) * (400 + 100 + 200), 1e-2);
+  assert.deepEqual(three?.bbox.size, [20, 20, 20]);
+});
+
+test('loft: round-to-square adapter is a valid solid; validation and cut mode', async () => {
+  const b = new ModelBuilder();
+  const a = b.add({ op: 'sketch', plane: 'XY', profile: [{ shape: 'circle', r: 10 }] });
+  const c = b.add({
+    op: 'sketch',
+    plane: 'XY',
+    offset: 20,
+    profile: [{ shape: 'rect', w: 16, h: 16 }],
+  });
+  b.add({ op: 'loft', id: 'adapter', sketches: [a, c] });
+  const m = await buildModel(b.toJSON());
+  assert.ok(m.report.ok, JSON.stringify(m.report.steps));
+  const v = m.report.bodies.adapter?.volume ?? 0;
+  assert.ok(v > Math.PI * 100 * 20 * 0.6 && v < 16 * 16 * 20 * 1.3, `volume ${v}`); // between the two prisms' scale
+
+  const bad = new ModelBuilder();
+  const s = bad.add({ op: 'sketch', plane: 'XY', profile: [{ shape: 'circle', r: 5 }] });
+  assert.throws(() => bad.add({ op: 'loft', sketches: [s] }), /Invalid step/);
+  assert.throws(() => bad.add({ op: 'loft', sketches: [s, 'ghost'] }), /Unknown sketch "ghost"/);
+
+  const cut = new ModelBuilder();
+  cut.add({ op: 'box', id: 'blk', w: 40, d: 40, h: 10, at: [0, 0, 5] });
+  const top = cut.add({
+    op: 'sketch',
+    plane: 'XY',
+    offset: 10,
+    profile: [{ shape: 'circle', r: 10 }],
+  });
+  const bottom = cut.add({
+    op: 'sketch',
+    plane: 'XY',
+    offset: 0,
+    profile: [{ shape: 'circle', r: 5 }],
+  });
+  cut.add({ op: 'loft', sketches: [top, bottom], mode: 'cut', target: 'blk' });
+  const mc = await buildModel(cut.toJSON());
+  assert.ok(mc.report.ok, JSON.stringify(mc.report.steps));
+  close(mc.report.bodies.blk?.volume ?? 0, 16000 - ((Math.PI * 10) / 3) * (100 + 50 + 25), 1e-2); // countersink
+});

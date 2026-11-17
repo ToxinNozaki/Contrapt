@@ -17,6 +17,7 @@ import {
   makeCylinder,
   makeSphere,
   type Shape3D,
+  type Sketch,
 } from 'replicad';
 import { evalExpr, exprNames, type Num } from './expr.ts';
 import { detectFormat } from './import.ts';
@@ -277,6 +278,35 @@ async function runStep(step: Step, ctx: Ctx): Promise<void> {
         ctx.bodies.set(step.id, solid);
       } else {
         if (!step.target) throw new Error(`revolve mode "${mode}" needs a target body`);
+        const t = get(ctx, step.target);
+        ctx.bodies.set(step.target, mode === 'add' ? t.fuse(solid) : t.cut(solid));
+      }
+      return;
+    }
+    case 'loft': {
+      const placed = step.sketches.map((id) => {
+        const sk = ctx.sketches.get(id);
+        if (!sk) {
+          throw new Error(
+            `No sketch "${id}". Existing sketches: ${[...ctx.sketches.keys()].join(', ') || '(none yet)'}`,
+          );
+        }
+        return sk;
+      });
+      // replicad consumes the sketches it lofts, so build fresh ones from the stored drawings.
+      const [first, ...rest] = placed.map((sk) =>
+        sk.drawing.sketchOnPlane(sk.plane as 'XY', sk.offset),
+      );
+      if (!first) throw new Error('loft needs at least two sketches');
+      const solid = as3D(
+        (first as Sketch).loftWith(rest as Sketch[], { ruled: step.ruled ?? false }),
+        'loft',
+      );
+      const mode = step.mode ?? 'new';
+      if (mode === 'new') {
+        ctx.bodies.set(step.id, solid);
+      } else {
+        if (!step.target) throw new Error(`loft mode "${mode}" needs a target body`);
         const t = get(ctx, step.target);
         ctx.bodies.set(step.target, mode === 'add' ? t.fuse(solid) : t.cut(solid));
       }

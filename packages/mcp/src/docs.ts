@@ -38,6 +38,7 @@ sketch {plane, offset?, profile:[items]}  -- profile items: rect {w,h,cx?,cy?,co
   circle {r,cx?,cy?}, polygon {points:[[x,y]...]}, ngon {sides,r,cx?,cy?}. Add "cut":true to subtract an item.
 extrude {sketch, distance, symmetric?, mode?: new|add|cut, target?}  -- add/cut modify \`target\` in place
 revolve {sketch, axis: X|Y|Z, origin?, angle? (degrees, default 360), mode?, target?}  -- spins the sketch profile about a WORLD axis; keep the profile on one side of the axis (turned parts: sketch on XZ, axis Z)
+loft {sketches:[id, id, ...], ruled?, mode?, target?}  -- blends through 2-12 sketches, each on its own plane/offset (e.g. round-to-square adapters, tapers, funnels, countersinks via mode cut)
 fillet {target, radius, edges}   chamfer {target, distance, edges}   shell {target, thickness, faces}
 boolean {kind: union|cut|intersect, a, b}  -- consumes a and b, creates a new body with this step's id
 transform {target, translate?:[x,y,z], rotate?:{angle,axis,origin?}}
