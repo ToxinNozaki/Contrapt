@@ -72,7 +72,7 @@ use \`box\` to select by region, or fillet before cutting the hole.`;
 const workflow = `# Recommended workflow
 1. get_docs if unsure. 2. new_model. 3. set_param for every dimension you may want to change later.
 4. Build with add_step (or one run_script). 5. Read the report after every change; fix the first error
-(later steps are skipped after a failure). 6. measure to verify volume / bounding box / centre of mass
+(later steps are skipped after a failure). 6. measure to verify volume / bounding box / centre of mass; check_interference {a,b} to verify fits (overlap volume, touching, or the exact gap between two bodies)
 against what you intended. 7. view to give the user the live viewer link. 8. export_model (step for
 fabrication/CAD, stl for printing) and save_model so work is not lost.
 If a step fails: read its message, fix with remove_step + add_step (or re-run the script).`;

@@ -106,3 +106,7 @@ so nothing is lost even if a bullet here is missed. Repo-relative paths only (th
 
 - Added `packages/core/src/materials.ts` (18 typical materials: density, E, yield) and the `material {target, name}` step. Body materials survive booleans (first operand wins, else second), mirror copies and patterns. Build report, `measure` and MCP feedback now carry `material` and `mass_g` (volume x density; solid). Cost per kg deliberately omitted: no verified prices.
 - Tests: mass for every material, a real 21.6 g aluminium plate, inheritance, suppress/reassign, error messages, script mode, MCP feedback + measure, and a test that keeps the library and `knowledge/materials.md` in agreement (density and modulus).
+
+## 2026-11-17 — B2.2 check_interference
+
+- Added `packages/core/src/interference.ts` and MCP tool `check_interference {a,b}`: status interferes/touching/clear, exact overlap volume and its bbox (boolean intersect on clones, so the bodies are never consumed), exact minimum gap via OpenCASCADE shape distance. Tests: overlap, face-to-face touching, separated gap, non-consumption, pin-in-hole loose vs tight (ring volume), MCP surface + bad ids.

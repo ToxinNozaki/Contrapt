@@ -245,3 +245,27 @@ test('constrained sketches give the AI solver feedback: degrees of freedom, conf
   const r4 = json(await call('set_param', { name: 'w', value: 60 }));
   assert.equal(r4.bodies.part.volume_mm3, 60 * 30 * 10);
 });
+
+test('check_interference reports overlap, touching and clear, and rejects bad ids', async () => {
+  await call('new_model', { name: 'fit' });
+  await call('add_step', { step: { op: 'box', id: 'a', w: 10, d: 10, h: 10 } });
+  await call('add_step', { step: { op: 'box', id: 'b', w: 10, d: 10, h: 10, at: [5, 0, 0] } });
+  await call('add_step', { step: { op: 'box', id: 'c', w: 10, d: 10, h: 10, at: [10, 0, 0] } });
+  await call('add_step', { step: { op: 'box', id: 'd', w: 10, d: 10, h: 10, at: [20, 0, 0] } });
+  const ab = json(await call('check_interference', { a: 'a', b: 'b' }));
+  assert.equal(ab.status, 'interferes');
+  assert.ok(Math.abs(ab.overlap_volume_mm3 - 500) < 1e-3);
+  assert.deepEqual(ab.overlap_bbox_mm.min, [0, -5, -5]);
+  assert.equal(json(await call('check_interference', { a: 'a', b: 'c' })).status, 'touching');
+  const ad = json(await call('check_interference', { a: 'a', b: 'd' }));
+  assert.equal(ad.status, 'clear');
+  assert.ok(Math.abs(ad.min_gap_mm - 10) < 1e-6);
+  assert.match(
+    (await call('check_interference', { a: 'a', b: 'zz' })).content[0]?.text ?? '',
+    /No body "zz"/,
+  );
+  assert.match(
+    (await call('check_interference', { a: 'a', b: 'a' })).content[0]?.text ?? '',
+    /two different/,
+  );
+});

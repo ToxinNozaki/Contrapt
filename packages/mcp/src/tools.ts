@@ -3,6 +3,7 @@
 import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import {
+  checkInterference,
   compileScript,
   describeBody,
   exportStep,
@@ -199,6 +200,32 @@ const tools: ToolDef[] = [
         out[id] = info;
       }
       return j(out);
+    },
+  },
+  {
+    name: 'check_interference',
+    description:
+      'Check whether two bodies overlap, touch or are clear. Exact: returns status (interferes | touching | clear), the overlap volume (mm^3) and its bounding box when they interfere, and the minimum gap (mm) when clear. Use it to verify fits (pin in hole, parts that must not collide) before export.',
+    input: { a: z.string(), b: z.string() },
+    readOnly: true,
+    run: async (args, ctx) => {
+      const model = ctx.session.model;
+      if (!model || model.bodies.size === 0) throw new Error('The model has no bodies yet');
+      const [a, b] = [args.a as string, args.b as string];
+      if (a === b) throw new Error('Pick two different bodies');
+      const have = [...model.bodies.keys()].join(', ');
+      const sa = model.bodies.get(a);
+      const sb = model.bodies.get(b);
+      if (!sa) throw new Error(`No body "${a}". Bodies: ${have}`);
+      if (!sb) throw new Error(`No body "${b}". Bodies: ${have}`);
+      const r = checkInterference(sa, sb, [a, b]);
+      return j({
+        status: r.status,
+        summary: r.summary,
+        overlap_volume_mm3: r.overlapVolume,
+        min_gap_mm: r.minDistance,
+        ...(r.overlapBbox ? { overlap_bbox_mm: r.overlapBbox } : {}),
+      });
     },
   },
   {

@@ -28,6 +28,11 @@ export {
   sniffContent,
 } from './import.ts';
 export {
+  checkInterference,
+  type InterferenceResult,
+  type InterferenceStatus,
+} from './interference.ts';
+export {
   extractImage,
   type InventorInfo,
   type InventorPreview,
