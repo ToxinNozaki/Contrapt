@@ -1,3 +1,14 @@
+export {
+  BEAM_SUPPORTS,
+  type BeamInput,
+  type BeamResult,
+  type BeamSupport,
+  beamCheck,
+  COLUMN_ENDS,
+  type ColumnEnds,
+  eulerBuckling,
+  type LoadKind,
+} from './beam.ts';
 export { ModelBuilder, STEP_OPS } from './builder.ts';
 export type { BuildOptions, FileProvider } from './engine.ts';
 export {
@@ -54,6 +65,7 @@ export {
   type ViewName,
 } from './render.ts';
 export { compileScript, type ScriptOptions } from './script.ts';
+export { type SectionProps, sectionProperties } from './section.ts';
 export { as3D } from './shapes.ts';
 export {
   type EdgeSelector,

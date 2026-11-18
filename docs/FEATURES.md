@@ -47,7 +47,7 @@ Status: `[ ]` planned · `[~]` in progress · `[x]` done · `[-]` dropped (say w
 - [ ] Edge/face classification selectors (convex, concave, outer, "created by step X") and named selections - Ideas Review #1
 - [x] Materials library (18 materials: density, E, yield) + `material` step; mass in measure and build feedback; library tied to the Materials pack by a test. Cost/kg and mass-weighted centre of mass still pending (no verified prices) - 2026-11-17
 - [x] `check_interference {a, b}` tool: exact overlap volume + bbox, touching, or exact gap (OpenCASCADE distance) - 2026-11-17
-- [ ] BIG BET (owner yes/no): section_properties + beam_check (analytic analysis on real sections), then the Proof Loop specs - Ideas Review #1
+- [x] section_properties + beam_check + column_check (analytic, closed-form, validated against textbook values; self weight) - 2026-11-17 (owner said do everything). Proof Loop specs: see Proof Loop section
 - [ ] Viewer: constraint glyphs, selection highlight, click a step to focus it - Ideas Review #1
 
 ## P2 — Query and verify (the AI's eyes)

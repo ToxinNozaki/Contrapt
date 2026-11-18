@@ -65,6 +65,8 @@ export interface Model {
   bodies: Map<string, Shape3D>;
   /** Material name per body id (bodies without a material are absent). */
   materials: Map<string, string>;
+  /** The sketches of the build (2D profiles), for section analysis. */
+  sketches: Map<string, { drawing: Drawing; plane: string; offset: number }>;
   report: BuildReport;
 }
 
@@ -839,11 +841,12 @@ export async function buildModel(timeline: Timeline, opts: BuildOptions = {}): P
   }
 
   const materials = new Map<string, string>();
+  const sketches: Ctx['sketches'] = new Map();
   const ctx: Ctx = {
     materials,
     n: (v) => (typeof v === 'number' ? v : evalExpr(v, (name) => params[name])),
     bodies,
-    sketches: new Map(),
+    sketches,
     files: opts.files,
   };
 
@@ -897,6 +900,7 @@ export async function buildModel(timeline: Timeline, opts: BuildOptions = {}): P
     timeline,
     bodies,
     materials,
+    sketches,
     report: { ok: !failed, params, steps: reports, bodies: info },
   };
 }

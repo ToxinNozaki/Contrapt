@@ -269,3 +269,72 @@ test('check_interference reports overlap, touching and clear, and rejects bad id
     /two different/,
   );
 });
+
+test('analysis tools: section_properties, beam_check (with self weight) and column_check match hand calculations', async () => {
+  await call('new_model', { name: 'beam' });
+  await call('add_step', {
+    step: { op: 'sketch', id: 'sec', plane: 'XY', profile: [{ shape: 'rect', w: 20, h: 5 }] },
+  });
+  const s = json(await call('section_properties', { sketch: 'sec' }));
+  assert.ok(Math.abs(s.Ix - 208.333333) < 1e-4);
+  assert.ok(Math.abs(s.Zx - 83.333333) < 1e-4);
+
+  const b = json(
+    await call('beam_check', {
+      support: 'cantilever',
+      load: 'point',
+      value: 50,
+      length_mm: 100,
+      sketch: 'sec',
+      material: '6061-T6',
+    }),
+  );
+  assert.ok(Math.abs(b.max_deflection_mm - 1.1594) < 2e-3, `${b.max_deflection_mm}`);
+  assert.ok(Math.abs(b.max_stress_MPa - 60) < 1e-6);
+  assert.ok(Math.abs(b.safety_factor_vs_yield - 4.58) < 0.01);
+  assert.match(b.note, /not a simulation/);
+
+  // self weight adds w = rho * A * g = 2.7e-6 * 100 * 9.81 N/mm as a uniform load
+  const sw = json(
+    await call('beam_check', {
+      support: 'cantilever',
+      load: 'point',
+      value: 50,
+      length_mm: 100,
+      sketch: 'sec',
+      material: '6061-T6',
+      self_weight: true,
+    }),
+  );
+  const w = 2.7e-6 * 100 * 9.81;
+  assert.ok(
+    Math.abs(
+      sw.max_deflection_mm - (b.max_deflection_mm + (w * 1e8) / ((8 * 69000 * (20 * 125)) / 12)),
+    ) < 1e-3,
+  );
+  assert.ok(sw.max_stress_MPa > b.max_stress_MPa);
+
+  const col = json(
+    await call('column_check', {
+      ends: 'pinned-pinned',
+      length_mm: 500,
+      sketch: 'sec',
+      material: '6061-T6',
+      axial_load_N: 10,
+    }),
+  );
+  // smaller I = Iy-or-Ix whichever is less: 20 x 5 -> 208.33 mm^4
+  assert.ok(Math.abs(col.critical_load_N - (Math.PI ** 2 * 69000 * 208.3333) / 500 ** 2) < 0.5);
+  assert.equal(col.governs, 'buckling');
+  assert.ok(col.buckling_safety_factor > 1);
+
+  assert.match(
+    (await call('beam_check', { support: 'cantilever', load: 'point', value: 1, length_mm: 10 }))
+      .content[0]?.text ?? '',
+    /sketch.*I_mm4/,
+  );
+  assert.match(
+    (await call('section_properties', { sketch: 'nope' })).content[0]?.text ?? '',
+    /No sketch "nope"/,
+  );
+});
