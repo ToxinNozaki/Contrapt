@@ -778,6 +778,48 @@ async function runStep(step: Step, ctx: Ctx): Promise<StepInfo | undefined> {
       ctx.bodies.set(step.id, shape);
       return;
     }
+    case 'mate': {
+      if (step.target === step.to.body) throw new Error('Cannot mate a body to itself');
+      const mover = get(ctx, step.target);
+      const fixed = get(ctx, step.to.body);
+      const a = findFace(
+        mover,
+        step.face.normal,
+        step.face.near?.map((x) => n(x)) as V3 | undefined,
+      );
+      const b = findFace(fixed, step.to.normal, step.to.near?.map((x) => n(x)) as V3 | undefined);
+      const opposite = {
+        '+X': '-X',
+        '-X': '+X',
+        '+Y': '-Y',
+        '-Y': '+Y',
+        '+Z': '-Z',
+        '-Z': '+Z',
+      } as Record<string, string>;
+      if (opposite[step.face.normal] !== step.to.normal)
+        throw new Error(
+          `Mating faces must point at each other: ${step.target} face ${step.face.normal} needs the other body's ${opposite[step.face.normal]} face, not ${step.to.normal}`,
+        );
+      const axis = { X: 0, Y: 1, Z: 2 }[step.to.normal.slice(1) as 'X' | 'Y' | 'Z'];
+      const sign = step.to.normal.startsWith('+') ? 1 : -1;
+      const gap = step.gap === undefined ? 0 : n(step.gap);
+      const delta: V3 = [0, 0, 0];
+      // put the mover's face on the fixed face's plane, then leave "gap" along the fixed face's outward normal
+      delta[axis] = b.level + sign * gap - a.level;
+      if (step.center) {
+        for (let i = 0; i < 3; i++) {
+          if (i === axis) continue;
+          const ca = ((a.min[i] ?? 0) + (a.max[i] ?? 0)) / 2;
+          const cb = ((b.min[i] ?? 0) + (b.max[i] ?? 0)) / 2;
+          delta[i] = cb - ca;
+        }
+      }
+      ctx.bodies.set(step.target, mover.translate(delta[0], delta[1], delta[2]));
+      const r = (x: number) => Math.round(x * 1e4) / 1e4;
+      return {
+        note: `mated ${step.target} ${a.description} to ${step.to.body} ${b.description}${gap ? ` with a ${gap} mm gap` : ''}${step.center ? ', centred' : ''}: moved by (${delta.map(r).join(', ')})`,
+      };
+    }
     case 'transform': {
       let t = get(ctx, step.target);
       if (step.rotate) {

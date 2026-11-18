@@ -32,6 +32,7 @@ export const STEP_OPS: StepOp[] = [
   'shell',
   'boolean',
   'transform',
+  'mate',
 ];
 
 export class ModelBuilder {
@@ -181,6 +182,10 @@ export class ModelBuilder {
       case 'shell':
       case 'transform':
         need(step.target, bodies, 'body');
+        break;
+      case 'mate':
+        need(step.target, bodies, 'body');
+        need(step.to.body, bodies, 'body');
         break;
       case 'boolean':
         need(step.a, bodies, 'body');

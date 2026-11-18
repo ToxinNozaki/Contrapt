@@ -1,4 +1,13 @@
 export {
+  type BomLine,
+  billOfMaterials,
+  interferenceReport,
+  type MotionInput,
+  type MotionStep,
+  motionCheck,
+  type PairResult,
+} from './assembly.ts';
+export {
   BEAM_SUPPORTS,
   type BeamInput,
   type BeamResult,

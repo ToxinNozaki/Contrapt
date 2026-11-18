@@ -373,6 +373,33 @@ export const StepInput = z.discriminatedUnion('op', [
   }),
   z.object({
     ...base,
+    op: z.literal('mate'),
+    target: Id.describe('the body that moves'),
+    face: z
+      .object({
+        normal: z.enum(DIRECTIONS),
+        near: Vec3.optional(),
+      })
+      .describe('the flat face of target that will touch the other body (by outward normal)'),
+    to: z
+      .object({
+        body: Id,
+        normal: z.enum(DIRECTIONS),
+        near: Vec3.optional(),
+      })
+      .describe(
+        'the flat face of the fixed body to mate with: its normal must be opposite to face.normal',
+      ),
+    gap: Num.optional().describe(
+      'clearance left between the two faces, mm (default 0 = touching; negative = overlap)',
+    ),
+    center: z
+      .boolean()
+      .optional()
+      .describe('also slide target in the face plane so the two faces are centred on each other'),
+  }),
+  z.object({
+    ...base,
     op: z.literal('transform'),
     target: Id,
     translate: Vec3.optional(),

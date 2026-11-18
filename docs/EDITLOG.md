@@ -125,3 +125,8 @@ so nothing is lost even if a bullet here is missed. Repo-relative paths only (th
 
 - Core `specs.ts` (SpecSchema: dimension, mass, volume, no_interference, min_gap, beam; evaluator with margins; beam specs flagged as estimates), `optimize.ts` (sweep + bisection over real rebuilds, never mutates the model, flags edge-of-range and infeasible cases). Timeline gains optional `specs` and `journal` (old files still load); ModelBuilder gets addSpec/removeSpec/addJournal.
 - MCP tools `add_spec`, `remove_spec`, `check_specs`, `journal_add`, `get_journal`, `optimize_param` (apply:true), `build_pack`; every tool reply now carries the live spec verdict; new `proof_loop` playbook. Hand-checked: a 20 mm wide 6061 cantilever arm needs t >= 4.169 mm for 2 mm droop at 50 N and the optimiser lands on 4.169.
+
+## 2026-11-17 — M6 assemblies (lightweight)
+
+- New `mate` step (face-to-face placement by outward normals, optional gap and centring; errors when faces do not oppose), core `assembly.ts` (`interferenceReport`, `billOfMaterials`, `motionCheck`) and MCP tools `check_assembly`, `bom`, `motion_check`. Design call: no constraint solver yet; axis-aligned face mates cover most enclosure/stack/bracket assemblies and stay exact. Joints, grounding and kinematics are still open (ledger P3/P5).
+- motion_check samples poses (flagged in output): thin parts need more steps. Exact first-collision step verified on a sliding pin (step 29 of 40) and a swinging arm.

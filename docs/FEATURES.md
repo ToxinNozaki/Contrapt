@@ -63,12 +63,12 @@ Status: `[ ]` planned · `[~]` in progress · `[x]` done · `[-]` dropped (say w
 
 ## P3 — Assemblies
 
-- [ ] Components, grounding, instance patterns
+- [~] Multi-body assemblies: bodies positioned with `transform` or the new face-to-face `mate` step (gap, centre) — no constraint solver, components/grounding/patterns pending - 2026-11-17
 - [ ] Joints: rigid, revolute, slider, cylindrical, planar, ball, screw
 - [ ] Gear, rack, belt/chain, cam relationships
 - [ ] Exploded views and assembly sequences
-- [ ] Assembly interference and motion-range checks
-- [ ] BOM with part numbers and quantities
+- [x] Assembly interference (check_assembly: all pairs) and motion-range checks (motion_check: translate/rotate sweep, first collision) - 2026-11-17; dynamics pending
+- [~] BOM (bom tool: grouped quantities, mass, totals) done 2026-11-17; part numbers pending
 
 ## P4 — Proof Loop (differentiator)
 
