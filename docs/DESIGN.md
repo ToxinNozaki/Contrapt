@@ -1,6 +1,7 @@
 # Contrapt — design doc
 
 > **Where we left off** (update this at every stop)
+> - **START HERE after any reset: [HANDOFF.md](HANDOFF.md)** (full state, rules, gotchas, and the exact next batch: materials+mass, check_interference, face-relative placement).
 > - **Date:** 2026-11-17 (session resumed; render_view added; header below partly historical, newest first)
 > - **Newest (2026-11-17, end of session 2):** M3 part-modelling is feature-complete for now: revolve, loft, sweep (bent paths), constrained sketches with arcs
 >   (FreeCAD solver; reports degrees of freedom and conflicts), holes (M2-M10 sizes, counterbore/countersink, warnings), patterns, mirror. Also: render_view (AI can see),

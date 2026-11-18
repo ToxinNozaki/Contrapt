@@ -2,6 +2,8 @@
 
 Read these, in this order, before doing anything else in this repo:
 
+0. [docs/HANDOFF.md](docs/HANDOFF.md): the complete current state, working rules, gotchas, owner-only items, and the exact NEXT batch of work. Start here after any context reset.
+
 1. [docs/DESIGN.md](docs/DESIGN.md) — what Contrapt is, the decisions made, and the **"Where we left off"** section at the top (read that first).
 2. [docs/ROADMAP.md](docs/ROADMAP.md) — milestones, exit criteria, Now/Next/Later, and Claude's Proposed Ideas backlog.
 3. [docs/FEATURES.md](docs/FEATURES.md) — the feature ledger. Every feature ever planned, with status. **Never delete an item**; mark it done, in-progress, or dropped (with a reason).
