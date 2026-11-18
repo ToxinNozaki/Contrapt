@@ -9,6 +9,7 @@ export {
 } from './engine.ts';
 export { exportStep, exportStl, meshBodies, type ViewerMesh } from './export.ts';
 export { evalExpr, exprNames, type Num } from './expr.ts';
+export { type FaceNormal, type FoundFace, faceToWorld, findFace, uvAxes } from './faces.ts';
 export {
   DIRECTIONS,
   holeTool,

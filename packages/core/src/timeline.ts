@@ -13,7 +13,19 @@ export const TIMELINE_VERSION = 1;
 
 const Num = z.union([z.number(), z.string()]);
 const Vec3 = z.tuple([Num, Num, Num]);
+const Vec2 = z.tuple([Num, Num]);
 const PlaneName = z.enum(['XY', 'YZ', 'ZX', 'XZ', 'YX', 'ZY']);
+const OnFace = z
+  .object({
+    target: z.string().describe('the body whose face to sketch on'),
+    normal: z.enum(DIRECTIONS).describe('outward normal of the flat face'),
+    near: Vec3.optional().describe(
+      'pick the matching face closest to this point (default: the outermost)',
+    ),
+  })
+  .describe(
+    'sketch on a face of a body instead of giving plane + offset. Profile coordinates are the face plane axes in world terms: +Z/-Z faces [x, y]; +Y/-Y faces [x, z]; +X/-X faces [y, z]. Extrusion distances follow the sketch plane normal (the note says which way).',
+  );
 const AxisName = z.enum(['X', 'Y', 'Z']);
 
 const Id = z
@@ -144,8 +156,9 @@ export const StepInput = z.discriminatedUnion('op', [
   z.object({
     ...base,
     op: z.literal('constrained_sketch'),
-    plane: PlaneName,
+    plane: PlaneName.optional(),
     offset: Num.optional(),
+    onFace: OnFace.optional(),
     points: z
       .record(EntityName, z.tuple([z.number(), z.number()]))
       .describe('named points with rough starting positions [x, y]'),
@@ -201,8 +214,9 @@ export const StepInput = z.discriminatedUnion('op', [
   z.object({
     ...base,
     op: z.literal('sketch'),
-    plane: PlaneName,
+    plane: PlaneName.optional(),
     offset: Num.optional(),
+    onFace: OnFace.optional(),
     profile: z.array(ProfileItem).min(1),
   }),
   z.object({
@@ -266,7 +280,31 @@ export const StepInput = z.discriminatedUnion('op', [
     target: Id,
     at: z
       .union([Vec3, z.array(Vec3).min(1).max(500)])
-      .describe('where the hole starts on the surface: one [x,y,z] or a list'),
+      .optional()
+      .describe('where the hole starts on the surface: one [x,y,z] or a list (or use face + uv)'),
+    face: z
+      .object({
+        normal: z.enum(DIRECTIONS).describe('outward normal of the flat face to drill into'),
+        near: Vec3.optional().describe(
+          'pick the matching face closest to this point (default: the outermost one)',
+        ),
+      })
+      .optional()
+      .describe(
+        'place holes on a face of the target instead of computing surface coordinates: use with uv',
+      ),
+    uv: z
+      .union([Vec2, z.array(Vec2).min(1).max(500)])
+      .optional()
+      .describe(
+        '2D position(s) on the face. +Z/-Z faces: [x, y]; +Y/-Y faces: [x, z]; +X/-X faces: [y, z]',
+      ),
+    uvFrom: z
+      .enum(['world', 'center', 'corner'])
+      .optional()
+      .describe(
+        'what uv is measured from: world coordinates (default), the face centre, or the face min corner',
+      ),
     direction: z
       .enum(DIRECTIONS)
       .optional()

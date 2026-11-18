@@ -110,3 +110,9 @@ so nothing is lost even if a bullet here is missed. Repo-relative paths only (th
 ## 2026-11-17 — B2.2 check_interference
 
 - Added `packages/core/src/interference.ts` and MCP tool `check_interference {a,b}`: status interferes/touching/clear, exact overlap volume and its bbox (boolean intersect on clones, so the bodies are never consumed), exact minimum gap via OpenCASCADE shape distance. Tests: overlap, face-to-face touching, separated gap, non-consumption, pin-in-hole loose vs tight (ring volume), MCP surface + bad ids.
+
+## 2026-11-17 — B2.3 face-relative placement (batch 2 complete)
+
+- New `packages/core/src/faces.ts` (find a planar face by outward normal, outermost or nearest `near`; map uv to world). `hole` accepts `face:{normal,near?}` + `uv` (+ `uvFrom`), defaulting its direction to drilling into the part; `sketch` and `constrained_sketch` accept `onFace:{target,normal,near?}` (plane+offset derived; the note states which way a positive extrude goes: XZ-plane offsets run along -Y, found by probing).
+- Bug fixed while testing: the 0.5 mm stick-out of a hole also cut into the part when the hole pointed out of it (the warning said it cut nothing). Stick-out now applies only to holes starting properly on a surface.
+- Tests: all six faces equal the world-coordinate form, uvFrom, outermost vs near, error messages, script mode + patterns, pockets/bosses on every face with the stated direction.

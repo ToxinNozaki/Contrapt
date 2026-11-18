@@ -23,6 +23,7 @@ import {
   type Sketch,
 } from 'replicad';
 import { evalExpr, exprNames, type Num } from './expr.ts';
+import { type FaceNormal, faceToWorld, findFace, uvAxes } from './faces.ts';
 import { holeTool, SCREWS, type ScrewSize, screwDiameter } from './holes.ts';
 import { detectFormat } from './import.ts';
 import { initKernel } from './kernel.ts';
@@ -159,6 +160,46 @@ function itemDrawing(item: DrawItem, n: Ctx['n']): Drawing {
       return pen.close();
     }
   }
+}
+
+// Plane (and offset) for a sketch: given directly, or taken from a face of a body.
+// Face sketches use the world-aligned plane parallel to the face, so profile coordinates stay world coordinates.
+const FACE_PLANE: Record<string, { plane: 'XY' | 'XZ' | 'YZ'; extrudes: string }> = {
+  '+Z': { plane: 'XY', extrudes: '+Z' },
+  '-Z': { plane: 'XY', extrudes: '+Z' },
+  '+Y': { plane: 'XZ', extrudes: '-Y' },
+  '-Y': { plane: 'XZ', extrudes: '-Y' },
+  '+X': { plane: 'YZ', extrudes: '+X' },
+  '-X': { plane: 'YZ', extrudes: '+X' },
+};
+function sketchPlane(
+  ctx: Ctx,
+  step: {
+    plane?: string;
+    offset?: Num;
+    onFace?: { target: string; normal: FaceNormal; near?: Num[] };
+  },
+  n: Ctx['n'],
+): { plane: string; offset: number; note?: string } {
+  if (step.onFace) {
+    if (step.plane || step.offset !== undefined)
+      throw new Error('Give a sketch either "plane" + "offset" or "onFace", not both');
+    const found = findFace(
+      get(ctx, step.onFace.target),
+      step.onFace.normal,
+      step.onFace.near?.map((x) => n(x)) as V3 | undefined,
+    );
+    const fp = FACE_PLANE[found.normal] as { plane: 'XY' | 'XZ' | 'YZ'; extrudes: string };
+    const [ua, va] = uvAxes(found.normal);
+    return {
+      plane: fp.plane,
+      // the XZ plane's offset runs along -Y, so a face at Y=level needs offset -level
+      offset: fp.plane === 'XZ' ? -found.level : found.level,
+      note: `sketch is on the ${found.description} of ${step.onFace.target}: profile coordinates are [${ua}, ${va}]; a positive extrude distance goes ${fp.extrudes}`,
+    };
+  }
+  if (!step.plane) throw new Error('A sketch needs "plane" (XY, YZ, XZ...) or "onFace"');
+  return { plane: step.plane, offset: step.offset === undefined ? 0 : n(step.offset) };
 }
 
 function profileDrawing(items: DrawItem[], n: Ctx['n']): Drawing {
@@ -298,14 +339,16 @@ async function runStep(step: Step, ctx: Ctx): Promise<StepInfo | undefined> {
       return;
     }
     case 'sketch': {
+      const where = sketchPlane(ctx, step, n);
       ctx.sketches.set(step.id, {
         drawing: profileDrawing(step.profile, n),
-        plane: step.plane,
-        offset: step.offset === undefined ? 0 : n(step.offset),
+        plane: where.plane,
+        offset: where.offset,
       });
-      return;
+      return where.note ? { note: where.note } : undefined;
     }
     case 'constrained_sketch': {
+      const where = sketchPlane(ctx, step, n);
       const num = (v: Num | undefined) => (v === undefined ? undefined : n(v));
       const out = await solveSketch({
         points: step.points,
@@ -352,8 +395,8 @@ async function runStep(step: Step, ctx: Ctx): Promise<StepInfo | undefined> {
       });
       ctx.sketches.set(step.id, {
         drawing: profileDrawing(items, n),
-        plane: step.plane,
-        offset: step.offset === undefined ? 0 : n(step.offset),
+        plane: where.plane,
+        offset: where.offset,
       });
       const state =
         out.dof === 0
@@ -365,7 +408,7 @@ async function runStep(step: Step, ctx: Ctx): Promise<StepInfo | undefined> {
         ? `; redundant (already implied, harmless): ${out.redundant.map(label).join('; ')}`
         : '';
       return {
-        note: `${state}${red}`,
+        note: `${where.note ? `${where.note}; ` : ''}${state}${red}`,
         data: { dof: out.dof, points: out.points, circles: out.circles },
       };
     }
@@ -502,15 +545,46 @@ async function runStep(step: Step, ctx: Ctx): Promise<StepInfo | undefined> {
       }
       if (counterbore && countersink)
         throw new Error('A hole can have a counterbore or a countersink, not both');
-      const raw = step.at as Num[] | Num[][];
-      const list = (Array.isArray(raw[0]) ? (raw as Num[][]) : [raw as Num[]]).map(
-        (p) => [n(p[0] as Num), n(p[1] as Num), n(p[2] as Num)] as V3,
-      );
+      let list: V3[];
+      let faceNote = '';
+      let faceDirection: FaceNormal | undefined;
+      if (step.face) {
+        if (step.at) throw new Error('Give a hole either "at" or "face" + "uv", not both');
+        if (!step.uv) {
+          const [ua, va] = uvAxes(step.face.normal);
+          throw new Error(
+            `A face-placed hole needs "uv": [${ua}, ${va}] on the ${step.face.normal} face`,
+          );
+        }
+        const near = step.face.near?.map((x) => n(x)) as V3 | undefined;
+        const found = findFace(t, step.face.normal, near);
+        const rawUv = step.uv as Num[] | Num[][];
+        const uvs = (Array.isArray(rawUv[0]) ? (rawUv as Num[][]) : [rawUv as Num[]]).map(
+          (p) => [n(p[0] as Num), n(p[1] as Num)] as [number, number],
+        );
+        list = uvs.map((p) => faceToWorld(found, p, step.uvFrom ?? 'world'));
+        faceNote = `on the ${found.description}; `;
+        // drill into the material: opposite of the outward normal, unless the caller says otherwise
+        faceDirection = (
+          { '+X': '-X', '-X': '+X', '+Y': '-Y', '-Y': '+Y', '+Z': '-Z', '-Z': '+Z' } as Record<
+            string,
+            FaceNormal
+          >
+        )[step.face.normal];
+      } else {
+        if (!step.at) throw new Error('A hole needs "at" (world coordinates) or "face" + "uv"');
+        if (step.uv) throw new Error('"uv" only works together with "face"');
+        const raw = step.at as Num[] | Num[][];
+        list = (Array.isArray(raw[0]) ? (raw as Num[][]) : [raw as Num[]]).map(
+          (p) => [n(p[0] as Num), n(p[1] as Num), n(p[2] as Num)] as V3,
+        );
+      }
+      const drillDir = step.direction ?? faceDirection ?? '-Z';
       const pat = step.pattern ? numericPattern(step.pattern, n) : undefined;
       const positions = pat ? list.flatMap((p) => patternPositions(p, pat)) : list;
       const spec = { diameter, depth, counterbore, countersink };
       // Sanity-check the start points with tiny probe cubes: a hole should start ON the surface.
-      const dirName = step.direction ?? '-Z';
+      const dirName = drillDir;
       const dv = (
         {
           '+X': [1, 0, 0],
@@ -532,11 +606,11 @@ async function runStep(step: Step, ctx: Ctx): Promise<StepInfo | undefined> {
       };
       const fmt = (p: V3) => p.map((x) => Math.round(x * 100) / 100).join(', ');
       const warnings: string[] = [];
-      const insideStart: boolean[] = [];
+      const onSurface: boolean[] = [];
       positions.slice(0, 6).forEach((p, i) => {
         const ahead = solidAt([p[0] + dv[0] * 0.05, p[1] + dv[1] * 0.05, p[2] + dv[2] * 0.05]);
         const behind = solidAt([p[0] - dv[0] * 0.05, p[1] - dv[1] * 0.05, p[2] - dv[2] * 0.05]);
-        insideStart[i] = ahead && behind;
+        onSurface[i] = ahead && !behind;
         if (ahead && behind) {
           warnings.push(
             `hole ${i + 1} starts INSIDE the material at (${fmt(p)}): start it on the surface, otherwise a counterbore/countersink and anything above that point are not cut`,
@@ -551,10 +625,11 @@ async function runStep(step: Step, ctx: Ctx): Promise<StepInfo | undefined> {
           );
         }
       });
-      // the small stick-out above the start point only applies to starts ON the surface
+      // the small stick-out behind the start point only applies to starts properly ON the surface, drilling inward;
+      // anywhere else it would shave 0.5 mm off the part (inside start, or a hole pointing out of the material)
       positions.forEach((p, i) => {
-        const inside = insideStart[Math.min(i, insideStart.length - 1)] ?? false;
-        t = t.cut(holeTool(spec, p, step.direction ?? '-Z', inside ? 0 : 0.5));
+        const proper = onSurface[Math.min(i, onSurface.length - 1)] ?? false;
+        t = t.cut(holeTool(spec, p, drillDir, proper ? 0.5 : 0));
       });
       ctx.bodies.set(step.target, t);
       const kind = counterbore
@@ -566,7 +641,7 @@ async function runStep(step: Step, ctx: Ctx): Promise<StepInfo | undefined> {
         ? `${size} ${fit === 'tap' ? 'tap drill (cosmetic thread)' : fit + ' clearance'}`
         : 'custom diameter';
       return {
-        note: `${warnings.length ? `WARNING: ${warnings.join('; ')}. ` : ''}${positions.length} hole(s) \u00d8${diameter} (${label}), ${kind}, ${through ? 'through' : `${depth} deep`}`,
+        note: `${warnings.length ? `WARNING: ${warnings.join('; ')}. ` : ''}${faceNote}${positions.length} hole(s) \u00d8${diameter} (${label}), ${kind}, ${through ? 'through' : `${depth} deep`}`,
       };
     }
     case 'pattern': {

@@ -8,7 +8,7 @@ Contrapt is a public MIT repo (https://github.com/ToxinNozaki/Contrapt, branch `
 parametric CAD workbench: TypeScript npm-workspaces monorepo, OpenCASCADE (via `replicad`) for exact geometry, FreeCAD's `planegcs` solver for
 constrained sketches, an MCP server (stdio + HTTP) with 21 tools, a live three.js viewer, a pure-JS renderer so the AI can see its model, 18 engineering
 knowledge packs + 10 playbooks, STEP import, Inventor support (metadata/preview natively, geometry via the optional `cadmpeg` converter), and a
-publishable `contrapt` npm package with a clean-install smoke test. **101 core + 63 mcp tests pass; CI (Node 22 and 24, lint + typecheck + tests +
+publishable `contrapt` npm package with a clean-install smoke test. **123 core + 66 mcp tests pass (after batch 2); CI (Node 22 and 24, lint + typecheck + tests +
 package smoke test) is green.** M0, M1 done; M2 about 95% (only owner steps left); M3 part-modelling feature-complete for now; Ideas Review #1 done.
 
 ## 2. Layout
@@ -20,9 +20,9 @@ package smoke test) is green.** M0, M1 done; M2 about 95% (only owner steps left
 - `docs/`: DESIGN, ROADMAP, FEATURES (never-delete ledger), EDITLOG (newest at bottom), SETUP, this file, `edits.auto.log`.
 
 ## 3. Steps (timeline ops) that exist
-box, cylinder, sphere, sketch, constrained_sketch, extrude, revolve, loft, sweep, fillet, chamfer, shell, boolean, transform, import (script name: `importFile`), hole, pattern, mirror.
+box, cylinder, sphere, sketch, constrained_sketch, extrude, revolve, loft, sweep, fillet, chamfer, shell, boolean, transform, import (script name: `importFile`), hole, pattern, mirror, material. `hole` takes `at` or `face`+`uv`; `sketch`/`constrained_sketch` take `plane` or `onFace`.
 Selectors: edges `{all, direction, plane, length, lengthAtLeast, lengthAtMost, curve, box, expect}`; faces `{plane, parallelTo, expect}`.
-MCP tools (21): get_docs, new_model, set_param, add_step, run_script, suppress_step, remove_step, get_model, measure, export_model, save_model, load_model, list_models, view,
+MCP tools (22, incl. check_interference): get_docs, new_model, set_param, add_step, run_script, suppress_step, remove_step, get_model, measure, export_model, save_model, load_model, list_models, view,
 inspect_file, import_file, convert_file, render_view, list_knowledge, get_knowledge, get_playbook.
 
 ## 4. Non-negotiable working rules
@@ -50,7 +50,9 @@ inspect_file, import_file, convert_file, render_view, list_knowledge, get_knowle
 (1) npm publish of `contrapt` (needs their npm account). (2) Checks inside real Claude Desktop and LM Studio (Claude Code is verified: `claude mcp list` shows Connected). (3) ChatGPT over HTTP is untried and may need OAuth rather than a bearer token.
 (4) Yes/no on the two BIG BETS in ROADMAP "Ideas Review #1" (analysis tools; start the Proof Loop). Their Claude Code registration currently has no `--cadmpeg` flag (their choice to enable the converter).
 
-## 7. SECOND BATCH (start here): the small Ideas-Review items, in this order
+## 7. SECOND BATCH: DONE 2026-11-17 (B2.1 materials/mass, B2.2 check_interference, B2.3 face-relative hole + sketch). Kept below for reference.
+**NEXT: report to the owner and get a yes/no on the two big bets in section 8 (analysis tools; the Proof Loop), then M6 assemblies.**
+Original spec:
 Each item: probe real behaviour first, implement, closed-form tests, MCP-level test, update docs.ts + knowledge pack + FEATURES + EDITLOG, run `npm run ci` and `npm run smoke:pack`, privacy scan, commit, push, wait for CI.
 
 **B2.1 Materials, mass and cost.** New `materials.ts` in core: a library (name, density g/cm3, E GPa, yield MPa, Poisson, cost per kg as a rough default flagged "typical") for the materials in `knowledge/materials.md`

@@ -39,11 +39,11 @@ Status: `[ ]` planned · `[~]` in progress · `[x]` done · `[-]` dropped (say w
 - [x] Revolve, loft and sweep are timeline ops (2026-11-17). Sweep follow-ups: hollow profiles in one step, helical/spline paths, guide rails, twist — added 2026-11-15
 
 - [x] Arcs in constrained sketches (centre/start/end, ccw; radius/diameter, onCircle, tangent line-arc / arc-arc / circle-arc; mixed line+arc loops, either direction) - 2026-11-17
-- [ ] Symmetric and midpoint constraints, reference dimensions, sketch on a face of an existing body - added 2026-11-17
+- [~] Symmetric and midpoint constraints, reference dimensions (pending); sketch on a face of an existing body (done 2026-11-17) - added 2026-11-17
 - [ ] Show constrained sketches in the viewer (dimension annotations, constraint glyphs, fully-defined colouring) - added 2026-11-17
 
 - [x] Hole start-point warnings; edge-selector filters lengthAtLeast/lengthAtMost/curve; readable messages for message-less kernel failures; leaner build replies (found by dogfooding, 2026-11-17)
-- [ ] Face-relative placement for holes and sketches (pick a face by normal/plane, give 2D coordinates on it) - Ideas Review #1, 2026-11-17
+- [x] Face-relative placement: `hole` with `face` + `uv` (+ uvFrom world|center|corner), `sketch`/`constrained_sketch` with `onFace`; picks outermost or nearest planar face by outward normal - 2026-11-17
 - [ ] Edge/face classification selectors (convex, concave, outer, "created by step X") and named selections - Ideas Review #1
 - [x] Materials library (18 materials: density, E, yield) + `material` step; mass in measure and build feedback; library tied to the Materials pack by a test. Cost/kg and mass-weighted centre of mass still pending (no verified prices) - 2026-11-17
 - [x] `check_interference {a, b}` tool: exact overlap volume + bbox, touching, or exact gap (OpenCASCADE distance) - 2026-11-17
