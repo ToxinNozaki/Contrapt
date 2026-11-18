@@ -120,3 +120,8 @@ so nothing is lost even if a bullet here is missed. Repo-relative paths only (th
 ## 2026-11-17 — Big bet 1: analysis tools
 
 - Owner said "do everything you need to do", so both big bets proceed. Added core `section.ts` (area, centroid, Ix/Iy/Ixy, principal axes, section moduli, radii via Green theorem on the exact boundary; holes subtract; verified on rectangle, circle, tubes, off-centre, L angle) and `beam.ts` (8 closed-form beam cases + Euler buckling), exposing `Model.sketches`. MCP tools `section_properties`, `beam_check` (sketch or explicit I/c, library material, optional self weight by superposition), `column_check`. Every result says it is a hand estimate, not a simulation. Gotcha: replicad `Face.outerWire()` consumes the face; clone first; composite profiles come back as `Sketches`, not a single face.
+
+## 2026-11-17 — Big bet 2: the Proof Loop
+
+- Core `specs.ts` (SpecSchema: dimension, mass, volume, no_interference, min_gap, beam; evaluator with margins; beam specs flagged as estimates), `optimize.ts` (sweep + bisection over real rebuilds, never mutates the model, flags edge-of-range and infeasible cases). Timeline gains optional `specs` and `journal` (old files still load); ModelBuilder gets addSpec/removeSpec/addJournal.
+- MCP tools `add_spec`, `remove_spec`, `check_specs`, `journal_add`, `get_journal`, `optimize_param` (apply:true), `build_pack`; every tool reply now carries the live spec verdict; new `proof_loop` playbook. Hand-checked: a 20 mm wide 6061 cantilever arm needs t >= 4.169 mm for 2 mm droop at 50 N and the optimiser lands on 4.169.

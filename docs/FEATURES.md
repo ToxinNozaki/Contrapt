@@ -72,10 +72,11 @@ Status: `[ ]` planned · `[~]` in progress · `[x]` done · `[-]` dropped (say w
 
 ## P4 — Proof Loop (differentiator)
 
-- [ ] Spec language: geometric, mass, and simulation-backed requirements
-- [ ] `check_specs` returning pass/fail with numbers after every change
-- [ ] `optimize` over named parameters against specs
-- [ ] Design Journal: text model, per-iteration log with metrics and renders
+- [x] Spec language (requirements-as-code, saved with the model): dimension, mass, volume, no_interference, min_gap, beam (hand-estimate, flagged); simulation-backed kinds pending real FEA - 2026-11-17
+- [x] `check_specs` + live spec verdict in every tool reply - 2026-11-17
+- [x] `optimize_param`: one-parameter sweep + bisection over real rebuilds against specs (multi-parameter pending) - 2026-11-17
+- [x] Design Journal (journal_add/get_journal, saved with the model, included in the Build Pack); per-iteration renders and metrics pending - 2026-11-17
+- [x] `build_pack` tool: README with verdict, parts, parameters, requirements, journal and caveats + STEP/STL per body + model JSON; `proof_loop` playbook - 2026-11-17
 - [ ] Variant compare + Pareto table
 - [ ] `what_could_go_wrong` red-team report
 - [ ] Mechanism synthesis (path/motion → linkage) — stretch

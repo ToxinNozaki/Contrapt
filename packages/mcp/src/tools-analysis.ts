@@ -2,7 +2,7 @@
 // These are textbook closed-form ESTIMATES. They say so in every result, and Contrapt does not run FEA yet.
 import {
   BEAM_SUPPORTS,
-  beamCheck,
+  beamWithSelfWeight,
   COLUMN_ENDS,
   eulerBuckling,
   getMaterial,
@@ -113,8 +113,7 @@ export const analysisTools: ToolDef[] = [
 
       const load = a.load as 'point' | 'uniform';
       const value = a.value as number;
-      let selfWeightNote: string | undefined;
-      let r = beamCheck({
+      const r = beamWithSelfWeight({
         support: a.support as never,
         load,
         value,
@@ -123,35 +122,14 @@ export const analysisTools: ToolDef[] = [
         I,
         c,
         yield: yieldMPa,
+        area,
+        density: mat?.density,
+        selfWeight: !!a.self_weight,
       });
-      if (a.self_weight) {
-        if (!mat || !area)
-          throw new Error('self_weight needs a material and an area (give a sketch or area_mm2)');
-        // weight per mm: density g/cm3 -> kg/mm3 is x1e-6; times area mm2, times g = 9.81 m/s2 gives N per mm
-        const w = mat.density * 1e-6 * area * 9.81;
-        const own = beamCheck({
-          support: a.support as never,
-          load: 'uniform',
-          value: w,
-          length: a.length_mm as number,
-          E,
-          I,
-          c,
-          yield: yieldMPa,
-        });
-        // superpose (linear elastic): add deflections, moments and stresses of the two load cases
-        const stress = r.stress + own.stress;
-        r = {
-          ...r,
-          deflection: r.deflection + own.deflection,
-          moment: r.moment + own.moment,
-          stress,
-          reaction: r.reaction + own.reaction,
-          spanOverDeflection: (a.length_mm as number) / (r.deflection + own.deflection),
-          ...(yieldMPa ? { safetyFactor: yieldMPa / stress } : {}),
-        };
-        selfWeightNote = `self weight ${round(w * (a.length_mm as number), 3)} N added as a uniform load of ${round(w, 6)} N/mm`;
-      }
+      const selfWeightNote =
+        r.selfWeightPerMm !== undefined
+          ? `self weight ${round(r.selfWeightPerMm * (a.length_mm as number), 3)} N added as a uniform load of ${round(r.selfWeightPerMm, 6)} N/mm`
+          : undefined;
       return j({
         support: a.support,
         input: {

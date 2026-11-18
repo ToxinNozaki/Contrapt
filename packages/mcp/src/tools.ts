@@ -6,6 +6,7 @@ import {
   checkInterference,
   compileScript,
   describeBody,
+  evaluateSpecs,
   exportStep,
   exportStl,
   getMaterial,
@@ -89,7 +90,25 @@ export function feedback(ctx: ToolContext, headline: string): string {
         : `${steps.filter((s) => s.status === 'ok').length}/${steps.length} ok (use get_model for details)`,
     params: report.params,
     bodies,
+    ...specStatus(ctx),
   });
+}
+
+/** Live Proof Loop status: shown after every change when the model has specs. */
+function specStatus(ctx: ToolContext) {
+  const specs = ctx.session.builder.specs;
+  const model = ctx.session.model;
+  if (specs.length === 0 || !model) return {};
+  const rep = evaluateSpecs(model, specs);
+  const failing = rep.results.filter((r) => !r.ok);
+  return {
+    specs: rep.allPass
+      ? `all ${rep.total} pass`
+      : {
+          passing: `${rep.passing}/${rep.total}`,
+          failing: failing.map((r) => ({ id: r.id, detail: r.summary })),
+        },
+  };
 }
 
 const tools: ToolDef[] = [

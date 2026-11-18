@@ -4,6 +4,7 @@ export {
   type BeamResult,
   type BeamSupport,
   beamCheck,
+  beamWithSelfWeight,
   COLUMN_ENDS,
   type ColumnEnds,
   eulerBuckling,
@@ -55,6 +56,7 @@ export { makeInventorLikeFixture, propertySet, TINY_PNG } from './inventor-fixtu
 export { initKernel, kernelDiagnostics } from './kernel.ts';
 export { getMaterial, MATERIAL_NAMES, MATERIALS, type Material, massGrams } from './materials.ts';
 export { type BodyInfo, describeBody } from './measure.ts';
+export { type OptimizeInput, type OptimizeResult, optimizeParam, type Trial } from './optimize.ts';
 export { mirrorPlane, patternCopies, patternPositions } from './pattern.ts';
 export {
   encodePng,
@@ -67,6 +69,19 @@ export {
 export { compileScript, type ScriptOptions } from './script.ts';
 export { type SectionProps, sectionProperties } from './section.ts';
 export { as3D } from './shapes.ts';
+export {
+  evaluateSpec,
+  evaluateSpecs,
+  type JournalEntry,
+  JournalEntrySchema,
+  METRICS,
+  type Metric,
+  measureMetric,
+  type Spec,
+  type SpecReport,
+  type SpecResult,
+  SpecSchema,
+} from './specs.ts';
 export {
   type EdgeSelector,
   emptyTimeline,

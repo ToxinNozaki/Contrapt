@@ -1,6 +1,7 @@
 // ModelBuilder: the tool-call API. Each call validates one step and appends it to the timeline.
 // The MCP server wraps this; scripts (see script.ts) drive the very same builder, so both ways of
 // describing a model produce identical timelines.
+import { type JournalEntry, JournalEntrySchema, type Spec, SpecSchema } from './specs.ts';
 import {
   emptyTimeline,
   formatZodError,
@@ -74,6 +75,48 @@ export class ModelBuilder {
     this.checkReferences(step);
     this.tl.steps.push({ ...step, id } as Step);
     return id;
+  }
+
+  get specs(): readonly Spec[] {
+    return this.tl.specs ?? [];
+  }
+
+  get journal(): readonly JournalEntry[] {
+    return this.tl.journal ?? [];
+  }
+
+  /** Add (or replace, same id) a Proof Loop requirement. */
+  addSpec(input: unknown): string {
+    const parsed = SpecSchema.safeParse(input);
+    if (!parsed.success) throw new Error(`Invalid spec: ${formatZodError(parsed.error)}`);
+    const specs = this.tl.specs ?? [];
+    const i = specs.findIndex((s) => s.id === parsed.data.id);
+    if (i >= 0) specs[i] = parsed.data;
+    else specs.push(parsed.data);
+    this.tl.specs = specs;
+    return parsed.data.id;
+  }
+
+  removeSpec(id: string): this {
+    const specs = this.tl.specs ?? [];
+    const i = specs.findIndex((s) => s.id === id);
+    if (i < 0)
+      throw new Error(`No spec "${id}". Specs: ${specs.map((s) => s.id).join(', ') || '(none)'}`);
+    specs.splice(i, 1);
+    this.tl.specs = specs;
+    return this;
+  }
+
+  /** Append to the Design Journal. */
+  addJournal(
+    kind: JournalEntry['kind'],
+    text: string,
+    at = new Date().toISOString(),
+  ): JournalEntry {
+    const parsed = JournalEntrySchema.safeParse({ at, kind, text });
+    if (!parsed.success) throw new Error(`Invalid journal entry: ${formatZodError(parsed.error)}`);
+    this.tl.journal = [...(this.tl.journal ?? []), parsed.data];
+    return parsed.data;
   }
 
   /** Suppress/unsuppress a step without deleting it. */

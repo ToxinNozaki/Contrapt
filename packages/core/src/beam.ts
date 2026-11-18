@@ -150,3 +150,30 @@ export function eulerBuckling(args: {
       : {}),
   };
 }
+
+/**
+ * beamCheck plus the beam's own weight as an extra uniform load (linear superposition).
+ * density in g/cm3, area in mm2: weight per mm = density x 1e-6 kg/mm3 x area x 9.81 m/s2 (N/mm).
+ */
+export function beamWithSelfWeight(
+  i: BeamInput & { area?: number; density?: number; selfWeight?: boolean },
+): BeamResult & { selfWeightPerMm?: number } {
+  const r = beamCheck(i);
+  if (!i.selfWeight) return r;
+  if (!i.area || !i.density)
+    throw new Error('self weight needs a material (density) and a section area');
+  const w = i.density * 1e-6 * i.area * 9.81;
+  const own = beamCheck({ ...i, load: 'uniform', value: w });
+  const stress = r.stress + own.stress;
+  const deflection = r.deflection + own.deflection;
+  return {
+    ...r,
+    deflection,
+    moment: r.moment + own.moment,
+    stress,
+    reaction: r.reaction + own.reaction,
+    spanOverDeflection: i.length / deflection,
+    ...(i.yield ? { safetyFactor: i.yield / stress } : {}),
+    selfWeightPerMm: w,
+  };
+}

@@ -8,6 +8,7 @@ import { DIRECTIONS, SCREW_SIZES } from './holes.ts';
 import { isSafeFileName } from './import.ts';
 import { MATERIAL_NAMES } from './materials.ts';
 import { CONSTRAINT_TYPES } from './sketch.ts';
+import { JournalEntrySchema, SpecSchema } from './specs.ts';
 
 export const TIMELINE_VERSION = 1;
 
@@ -390,6 +391,10 @@ export const TimelineSchema = z.object({
   units: z.literal('mm'),
   params: z.record(z.string().regex(/^[A-Za-z_][A-Za-z0-9_]*$/), Num),
   steps: z.array(StepInput.and(z.object({ id: Id }))),
+  /** Proof Loop requirements, checked against the rebuilt geometry. */
+  specs: z.array(SpecSchema).optional(),
+  /** Design Journal: decisions and tests, in order. */
+  journal: z.array(JournalEntrySchema).optional(),
 });
 export type Timeline = z.infer<typeof TimelineSchema>;
 

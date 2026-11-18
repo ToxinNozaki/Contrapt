@@ -48,6 +48,34 @@ const topicIndex = () =>
 
 export const PLAYBOOKS: Playbook[] = [
   {
+    name: 'proof_loop',
+    title: 'Prove it works (requirements, checks, optimise, Build Pack)',
+    description:
+      'The Contrapt differentiator: write requirements as specs first, let the real geometry judge them after every change, optimise one parameter against them, journal decisions, and ship a Build Pack with the evidence.',
+    args: { goal: z.string().describe('What the design must do, with the numbers that matter') },
+    build: (a) =>
+      `${PREAMBLE}
+
+## Task
+Run the Proof Loop for: ${a.goal ?? '(no goal given: ask)'}
+
+1. REQUIREMENTS FIRST. Turn the goal into numbers (loads, limits, sizes, mass budget, fits) and write each as a spec with add_spec BEFORE modelling: dimension, mass, volume, no_interference, min_gap, beam. Put the reason in each spec description. Ask only for numbers you truly cannot assume; state assumptions.
+2. MODEL it parametrically (set_param for every key dimension, add a material step so mass is known). Every reply now carries the live spec verdict: read it.
+3. JUDGE with check_specs. For each FAIL, change the cause (parameter, material, feature), not the spec, unless the requirement was wrong; if you relax a spec, journal_add a decision saying why.
+4. OPTIMISE: when one parameter trades off against the rest (wall thickness vs mass, arm length vs stress), use optimize_param to find the best value that still passes, with apply:true. Read the trial table; widen the range if the best value sits at an edge.
+5. RED-TEAM: run the design_review playbook thinking, then add specs for any risk you can measure (clearances, interference) and journal_add each risk you cannot (kind risk).
+6. RECORD: journal_add the key decisions and test results with numbers.
+7. SHIP: when check_specs says ALL SPECS PASS, call build_pack and report: the verdict, key numbers, what is a hand estimate (beam specs) versus measured geometry, and what was NOT verified (no FEA, fatigue, thermal, manufacturing tolerances).
+
+Never say the design is proven beyond what the specs actually test. Beam specs are closed-form estimates.
+
+${pack('engineering-method')}
+
+${pack('strength-and-stiffness')}
+
+${pack('design-failure-modes')}`,
+  },
+  {
     name: 'engineer',
     title: 'Senior design engineer (start here)',
     description:
@@ -173,7 +201,7 @@ ${pack('engineering-method')}`,
       'Produce everything needed to actually build the design: files, bill of materials, tools, steps, and a test plan.',
     args: { quantity: z.string().optional().describe('How many to make') },
     build: (a) =>
-      `${PREAMBLE}\n\n## Task\nPrepare a build pack for the model currently open (quantity: ${a.quantity ?? '1'}).\n\n1. Export what exists today with export_model (STEP for CAD/CNC, STL for printing) and save_model.\n2. Bill of materials: every printed/cut/machined part (material, process, quantity, volume, estimated mass from density) and every purchased part (fasteners with exact sizes and lengths, bearings, motors, electronics) using the fasteners and materials packs.\n3. Manufacturing notes per part: orientation/settings/tolerances/finishing from the process pack; flag features that need attention.\n4. Assembly steps in order, tools needed, torque or adhesive notes, and what can go in backwards.\n5. Test plan: first power-on or load test steps, safe limits, and what to inspect.\n6. List clearly what Contrapt does not yet generate (drawings, flat patterns, auto BOM) and any unverified items.\n\n${pack('fasteners-and-joints')}\n\n${pack('materials')}\n\n${pack('tolerances-and-fits')}\n\n${pack('safety-and-ethics')}`,
+      `${PREAMBLE}\n\n## Task\nPrepare a build pack for the model currently open (quantity: ${a.quantity ?? '1'}).\n\n1. Call the build_pack tool first (README with verdict, parts, parameters, requirements and journal, plus STEP and STL per body), then export anything extra with export_model (STEP for CAD/CNC, STL for printing) and save_model.\n2. Bill of materials: every printed/cut/machined part (material, process, quantity, volume, estimated mass from density) and every purchased part (fasteners with exact sizes and lengths, bearings, motors, electronics) using the fasteners and materials packs.\n3. Manufacturing notes per part: orientation/settings/tolerances/finishing from the process pack; flag features that need attention.\n4. Assembly steps in order, tools needed, torque or adhesive notes, and what can go in backwards.\n5. Test plan: first power-on or load test steps, safe limits, and what to inspect.\n6. List clearly what Contrapt does not yet generate (drawings, flat patterns, auto BOM) and any unverified items.\n\n${pack('fasteners-and-joints')}\n\n${pack('materials')}\n\n${pack('tolerances-and-fits')}\n\n${pack('safety-and-ethics')}`,
   },
 ];
 
