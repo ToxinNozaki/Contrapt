@@ -26,6 +26,7 @@ import { evalExpr, exprNames, type Num } from './expr.ts';
 import { holeTool, SCREWS, type ScrewSize, screwDiameter } from './holes.ts';
 import { detectFormat } from './import.ts';
 import { initKernel } from './kernel.ts';
+import { getMaterial, massGrams } from './materials.ts';
 import { type BodyInfo, describeBody } from './measure.ts';
 import { buildSpine, profileFrame, type V3 } from './path.ts';
 import { mirrorPlane, type PatternNumeric, patternCopies, patternPositions } from './pattern.ts';
@@ -61,6 +62,8 @@ export interface Model {
   timeline: Timeline;
   /** Live kernel shapes by body id (not serialisable). */
   bodies: Map<string, Shape3D>;
+  /** Material name per body id (bodies without a material are absent). */
+  materials: Map<string, string>;
   report: BuildReport;
 }
 
@@ -99,6 +102,7 @@ type PatternSpecInput = Extract<Step, { op: 'hole' }>['pattern'] & object;
 
 type Ctx = {
   files?: FileProvider;
+  materials: Map<string, string>;
   n: (v: Num) => number;
   bodies: Map<string, Shape3D>;
   sketches: Map<string, { drawing: Drawing; plane: string; offset: number }>;
@@ -572,6 +576,7 @@ async function runStep(step: Step, ctx: Ctx): Promise<StepInfo | undefined> {
       let r = t;
       for (const c of copies) r = step.mode === 'cut' ? r.cut(c) : r.fuse(c);
       ctx.bodies.delete(step.tool);
+      ctx.materials.delete(step.tool);
       ctx.bodies.set(step.target, r);
       return {
         note: `${copies.length} instances ${step.mode === 'cut' ? 'cut from' : 'fused to'} "${step.target}"`,
@@ -584,8 +589,11 @@ async function runStep(step: Step, ctx: Ctx): Promise<StepInfo | undefined> {
         step.offset === undefined ? 0 : n(step.offset),
       );
       const image = as3D(t.clone().mirror(plane, origin), 'mirror');
-      if ((step.mode ?? 'add') === 'new') ctx.bodies.set(step.id, image);
-      else ctx.bodies.set(step.target, t.fuse(image));
+      if ((step.mode ?? 'add') === 'new') {
+        ctx.bodies.set(step.id, image);
+        const m = ctx.materials.get(step.target);
+        if (m) ctx.materials.set(step.id, m);
+      } else ctx.bodies.set(step.target, t.fuse(image));
       return;
     }
     case 'loft': {
@@ -646,13 +654,23 @@ async function runStep(step: Step, ctx: Ctx): Promise<StepInfo | undefined> {
       ctx.bodies.set(step.target, t.shell(n(step.thickness), f));
       return;
     }
+    case 'material': {
+      get(ctx, step.target);
+      const m = getMaterial(step.name);
+      ctx.materials.set(step.target, m.name);
+      return { note: `${step.target} is ${m.label} (${m.density} g/cm3)` };
+    }
     case 'boolean': {
       const a = get(ctx, step.a);
       const b = get(ctx, step.b);
       const r = step.kind === 'union' ? a.fuse(b) : step.kind === 'cut' ? a.cut(b) : a.intersect(b);
+      const inherited = ctx.materials.get(step.a) ?? ctx.materials.get(step.b);
       ctx.bodies.delete(step.a);
       ctx.bodies.delete(step.b);
+      ctx.materials.delete(step.a);
+      ctx.materials.delete(step.b);
       ctx.bodies.set(step.id, r);
+      if (inherited) ctx.materials.set(step.id, inherited);
       return;
     }
     case 'import': {
@@ -745,7 +763,9 @@ export async function buildModel(timeline: Timeline, opts: BuildOptions = {}): P
     });
   }
 
+  const materials = new Map<string, string>();
   const ctx: Ctx = {
+    materials,
     n: (v) => (typeof v === 'number' ? v : evalExpr(v, (name) => params[name])),
     bodies,
     sketches: new Map(),
@@ -787,12 +807,23 @@ export async function buildModel(timeline: Timeline, opts: BuildOptions = {}): P
   const info: Record<string, BodyInfo> = {};
   for (const [id, shape] of bodies) {
     try {
-      info[id] = describeBody(shape);
+      const body = describeBody(shape);
+      const mat = materials.get(id);
+      if (mat) {
+        body.material = mat;
+        body.massG = massGrams(body.volume, getMaterial(mat).density);
+      }
+      info[id] = body;
     } catch {
       /* a body we can't measure is still returned as a live shape */
     }
   }
-  return { timeline, bodies, report: { ok: !failed, params, steps: reports, bodies: info } };
+  return {
+    timeline,
+    bodies,
+    materials,
+    report: { ok: !failed, params, steps: reports, bodies: info },
+  };
 }
 
 const round = (x: number, d: number) => Math.round(x * 10 ** d) / 10 ** d;

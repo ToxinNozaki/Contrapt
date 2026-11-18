@@ -1,0 +1,58 @@
+// The material library (core) and the Materials knowledge pack (mcp) must never disagree.
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { test } from 'node:test';
+import { fileURLToPath } from 'node:url';
+import { MATERIALS } from '@contrapt/core';
+
+const pack = readFileSync(
+  join(dirname(fileURLToPath(import.meta.url)), '..', 'knowledge', 'materials.md'),
+  'utf8',
+);
+
+/** Numbers in a cell: "2.70" -> [2.7]; "0.6–0.7" -> [0.6, 0.7]; "~3.5" -> [3.5]; "low" -> []. */
+const nums = (cell: string) => (cell.match(/\d+(?:\.\d+)?/g) ?? []).map(Number);
+
+const rows = new Map<string, string[]>();
+for (const line of pack.split('\n')) {
+  if (!line.startsWith('|')) continue;
+  const cells = line
+    .split('|')
+    .slice(1, -1)
+    .map((c) => c.trim());
+  if (cells[0]) rows.set(cells[0], cells);
+}
+
+test('every library material has its row in the Materials pack, with matching density and modulus', () => {
+  for (const m of Object.values(MATERIALS)) {
+    const row = rows.get(m.packRow);
+    assert.ok(row, `${m.name}: no row "${m.packRow}" in knowledge/materials.md`);
+
+    const rho = nums(row[3] ?? '');
+    assert.ok(rho.length > 0, `${m.name}: no density in the pack`);
+    const [lo, hi] = [Math.min(...rho), Math.max(...rho)];
+    assert.ok(
+      m.density >= lo - 1e-9 && m.density <= hi + 1e-9,
+      `${m.name}: library density ${m.density} outside pack ${lo}-${hi}`,
+    );
+
+    const e = nums(row[1] ?? '');
+    if (m.youngsModulusGPa !== undefined && e.length > 0) {
+      assert.ok(
+        m.youngsModulusGPa >= Math.min(...e) - 1e-9 && m.youngsModulusGPa <= Math.max(...e) + 1e-9,
+        `${m.name}: library E ${m.youngsModulusGPa} outside pack ${e.join('-')}`,
+      );
+    }
+  }
+});
+
+test('every pack material row exists in the library (so the pack never promises a missing material)', () => {
+  const known = new Set(Object.values(MATERIALS).map((m) => m.packRow));
+  for (const [label, cells] of rows) {
+    if (label === 'Material' || /^-+$/.test(label)) continue;
+    if (!/^\d+(\.\d+)?$/.test(cells[3]?.replace(/[^0-9.]/g, '') ?? '')) continue; // not a material row
+    if (!cells[3] || nums(cells[3]).length === 0) continue;
+    assert.ok(known.has(label), `pack row "${label}" has no library entry`);
+  }
+});

@@ -36,6 +36,7 @@ export {
 } from './inventor.ts';
 export { makeInventorLikeFixture, propertySet, TINY_PNG } from './inventor-fixture.ts';
 export { initKernel, kernelDiagnostics } from './kernel.ts';
+export { getMaterial, MATERIAL_NAMES, MATERIALS, type Material, massGrams } from './materials.ts';
 export { type BodyInfo, describeBody } from './measure.ts';
 export { mirrorPlane, patternCopies, patternPositions } from './pattern.ts';
 export {

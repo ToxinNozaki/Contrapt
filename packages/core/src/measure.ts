@@ -2,6 +2,9 @@
 import { measureArea, measureShapeVolumeProperties, type Shape3D } from 'replicad';
 
 export interface BodyInfo {
+  /** Set when the body has a material: its name, and its mass in grams (volume x density). */
+  material?: string;
+  massG?: number;
   /** mm^3 */
   volume: number;
   /** mm^2, total surface area */

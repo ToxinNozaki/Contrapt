@@ -91,6 +91,24 @@ test('build a plate with tool calls and get verified numbers back', async () => 
   assert.equal(r2.bodies.plate.volume_mm3, 60 * 40 * 10);
 });
 
+test('material step puts material and mass_g in the feedback and in measure', async () => {
+  await call('new_model', { name: 'weigh' });
+  await call('add_step', { step: { op: 'box', id: 'blk', w: 40, d: 20, h: 10 } });
+  const r = json(
+    await call('add_step', { step: { op: 'material', target: 'blk', name: '6061-T6' } }),
+  );
+  assert.equal(r.ok, true);
+  assert.equal(r.bodies.blk.material, '6061-T6');
+  assert.equal(r.bodies.blk.mass_g, 21.6);
+  const m = json(await call('measure', { body: 'blk' }));
+  assert.equal(m.blk.material, '6061-T6');
+  assert.equal(m.blk.massG, 21.6);
+  const bad = await call('add_step', {
+    step: { op: 'material', target: 'blk', name: 'unobtainium' },
+  });
+  assert.match(bad.content[0]?.text ?? '', /Invalid|invalid/);
+});
+
 test('invalid steps return a readable error, not a crash', async () => {
   const r = await call('add_step', { step: { op: 'box', w: 1 } });
   assert.equal(r.isError, true);

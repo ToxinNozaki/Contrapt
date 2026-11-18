@@ -45,14 +45,14 @@ Status: `[ ]` planned · `[~]` in progress · `[x]` done · `[-]` dropped (say w
 - [x] Hole start-point warnings; edge-selector filters lengthAtLeast/lengthAtMost/curve; readable messages for message-less kernel failures; leaner build replies (found by dogfooding, 2026-11-17)
 - [ ] Face-relative placement for holes and sketches (pick a face by normal/plane, give 2D coordinates on it) - Ideas Review #1, 2026-11-17
 - [ ] Edge/face classification selectors (convex, concave, outer, "created by step X") and named selections - Ideas Review #1
-- [ ] Materials library with density/modulus/yield/cost; mass, centre of mass and cost in measure - Ideas Review #1
+- [x] Materials library (18 materials: density, E, yield) + `material` step; mass in measure and build feedback; library tied to the Materials pack by a test. Cost/kg and mass-weighted centre of mass still pending (no verified prices) - 2026-11-17
 - [ ] `check_interference {a, b}` tool (exact overlap volume), pulled forward from M6 - Ideas Review #1
 - [ ] BIG BET (owner yes/no): section_properties + beam_check (analytic analysis on real sections), then the Proof Loop specs - Ideas Review #1
 - [ ] Viewer: constraint glyphs, selection highlight, click a step to focus it - Ideas Review #1
 
 ## P2 — Query and verify (the AI's eyes)
 
-- [~] Mass properties — volume, area, centre of mass done (2026-11-15); mass (needs materials) and inertia tensor pending
+- [~] Mass properties — volume, area, centre of mass done (2026-11-15); mass from material done (2026-11-17); inertia tensor pending
 - [~] Bounding box done (2026-11-15); distance between entities and angle between faces pending
 - [ ] Section views and cut-plane renders
 - [ ] Interference / clearance check between bodies

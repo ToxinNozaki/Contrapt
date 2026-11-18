@@ -6,6 +6,7 @@
 import { z } from 'zod';
 import { DIRECTIONS, SCREW_SIZES } from './holes.ts';
 import { isSafeFileName } from './import.ts';
+import { MATERIAL_NAMES } from './materials.ts';
 import { CONSTRAINT_TYPES } from './sketch.ts';
 
 export const TIMELINE_VERSION = 1;
@@ -310,6 +311,16 @@ export const StepInput = z.discriminatedUnion('op', [
       .enum(['add', 'new'])
       .optional()
       .describe('add = fuse the mirror image to the target (default), new = a separate body'),
+  }),
+  z.object({
+    ...base,
+    op: z.literal('material'),
+    target: Id,
+    name: z
+      .enum(MATERIAL_NAMES)
+      .describe(
+        'a material from the library: sets density for mass (see list_knowledge: materials)',
+      ),
   }),
   z.object({ ...base, op: z.literal('fillet'), target: Id, radius: Num, edges: EdgeSelector }),
   z.object({ ...base, op: z.literal('chamfer'), target: Id, distance: Num, edges: EdgeSelector }),

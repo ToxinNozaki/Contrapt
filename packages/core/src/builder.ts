@@ -23,6 +23,7 @@ export const STEP_OPS: StepOp[] = [
   'loft',
   'sweep',
   'hole',
+  'material',
   'pattern',
   'mirror',
   'fillet',
@@ -124,6 +125,7 @@ export class ModelBuilder {
         need(step.target, bodies, 'body');
         break;
       case 'hole':
+      case 'material':
       case 'mirror':
         need(step.target, bodies, 'body');
         break;

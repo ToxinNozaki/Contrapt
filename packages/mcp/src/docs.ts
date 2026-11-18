@@ -51,6 +51,7 @@ hole {target, at:[x,y,z] or a list, direction? (+X -X +Y -Y +Z -Z, default -Z = 
   -- 'at' is where the hole STARTS on the surface. The note reports what was drilled.
 pattern {target, tool: <body id>, pattern:{kind:'linear',count,step:[dx,dy,dz]} | {kind:'circular',count,axis,center?,angle?}, mode: cut|add}  -- repeats a body (consumed) into the target
 mirror {target, axis: X|Y|Z, offset?, mode?: add (default, fuse the mirror image) | new}  -- mirror across the plane perpendicular to the axis
+material {target, name}  -- assigns a library material (6061-T6, 7075-T6, mild-steel, stainless-304, alloy-steel-4140, brass, copper, titanium-6al4v, PLA, PETG, ABS, nylon, polycarbonate, TPU, acrylic, acetal, birch-plywood, hardwood). The build report and measure then include material and mass_g (volume x typical density; solid, so printed parts with infill weigh less). Booleans keep the first operand's material.
 fillet {target, radius, edges}   chamfer {target, distance, edges}   shell {target, thickness, faces}
 boolean {kind: union|cut|intersect, a, b}  -- consumes a and b, creates a new body with this step's id
 transform {target, translate?:[x,y,z], rotate?:{angle,axis,origin?}}

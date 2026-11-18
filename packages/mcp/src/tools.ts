@@ -2,7 +2,15 @@
 // an OpenAI-style function adapter / REST endpoint later.
 import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { compileScript, describeBody, exportStep, exportStl, StepInput } from '@contrapt/core';
+import {
+  compileScript,
+  describeBody,
+  exportStep,
+  exportStl,
+  getMaterial,
+  massGrams,
+  StepInput,
+} from '@contrapt/core';
 import { z } from 'zod';
 import { DOC_TOPICS, type DocTopic, getDocs } from './docs.ts';
 import type { Session } from './session.ts';
@@ -51,6 +59,7 @@ export function feedback(ctx: ToolContext, headline: string): string {
         bbox_size_mm: b.bbox.size,
         bbox_min_mm: b.bbox.min,
         center_of_mass_mm: b.centerOfMass,
+        ...(b.material ? { material: b.material, mass_g: b.massG } : {}),
       },
     ]),
   );
@@ -181,7 +190,13 @@ const tools: ToolDef[] = [
         const shape = model.bodies.get(id);
         if (!shape)
           throw new Error(`No body "${id}". Bodies: ${[...model.bodies.keys()].join(', ')}`);
-        out[id] = describeBody(shape);
+        const info = describeBody(shape);
+        const mat = model.materials.get(id);
+        if (mat) {
+          info.material = mat;
+          info.massG = massGrams(info.volume, getMaterial(mat).density);
+        }
+        out[id] = info;
       }
       return j(out);
     },
