@@ -103,3 +103,19 @@ test('drawing writes an SVG sheet with the right dimensions and rejects bad name
   assert.match(svg, /PETG/);
   assert.match(text(await call('drawing', { name: '../x' })), /letters, digits/);
 });
+
+test('print_check reports overhangs and the better orientation through the tool', async () => {
+  await call('new_model', { name: 'T' });
+  await call('add_step', { step: { op: 'box', id: 'flange', w: 60, d: 20, h: 4, at: [0, 0, 22] } });
+  await call('add_step', { step: { op: 'box', id: 'stem', w: 6, d: 20, h: 20, at: [0, 0, 10] } });
+  await call('add_step', {
+    step: { op: 'boolean', id: 'p', kind: 'union', a: 'flange', b: 'stem' },
+  });
+  const r = json(await call('print_check', { body: 'p', build_volume_mm: [220, 220, 250] }));
+  assert.ok(Math.abs(r.current_orientation.overhangAreaMm2 - 1080) < 2);
+  assert.notEqual(r.recommended_up, '+Z');
+  assert.ok(r.findings.some((f: { severity: string }) => f.severity === 'warn'));
+  assert.equal(r.current_orientation.fitsBuildVolume, true);
+  assert.match(r.note, /not a slicer/);
+  assert.match(text(await call('print_check', { body: 'zz' })), /No body "zz"/);
+});

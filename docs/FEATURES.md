@@ -101,7 +101,7 @@ Status: `[ ]` planned · `[~]` in progress · `[x]` done · `[-]` dropped (say w
 - [ ] Frames/weldments: structural member library, miters, cut list
 - [ ] Tube and pipe — stretch
 - [ ] Plastic features: boss, rib, lip/groove, snap fit
-- [ ] 3D-print checker: overhangs, wall thickness, bridging, supports estimate
+- [~] 3D-print checker (print_check): overhang area, support-volume upper bound, six-orientation advice, bed contact, thin walls by ray casting, build-volume fit - 2026-11-19; bridging and tiny-feature checks pending
 - [ ] Laser/CNC export (DXF/SVG nests)
 - [~] 2D drawings: SVG sheet with third-angle front/top/right views, hidden lines, overall dimensions, auto standard scale and title block (drawing tool) done 2026-11-19; section views, detail views, hole/feature dimensions, tolerances, PDF and DXF pending
 - [ ] Standard parts library: fasteners, bearings, motors, extrusions, with real specs

@@ -142,3 +142,7 @@ so nothing is lost even if a bullet here is missed. Repo-relative paths only (th
 ## 2026-11-19 — Drawings
 
 - Core `drawing.ts` (`drawingSheet`) and MCP tool `drawing`: A4 landscape SVG in mm from replicad's exact projections (third-angle front/top/right), dashed hidden lines, overall width/height/depth dimensions with arrowheads, automatic standard scale (100:1 down to 1:1000), title block (title, number, material, mass, scale, projection), escaped text. Layout is tested numerically (views and dimension lines inside the border, no overlaps, thin/tall/round parts). The browser pane refused localhost, so the owner was sent the sample SVG instead of a screenshot; I could not eyeball it myself. Not yet: sections, detail views, feature dimensions, tolerances, DXF/PDF.
+
+## 2026-11-19 — 3D-print checker
+
+- Core `printcheck.ts` and MCP tool `print_check`: tessellates the exact body, computes overhang area and a support-volume upper bound for six axis-aligned orientations, recommends one (fits the build volume first, then least support, then shortest), bed contact, and local wall thickness by casting rays along the inward normal (up to 800 samples). Bug caught by the first test run: the far-wall filter had the normal sign backwards (a ray exits through a surface whose outward normal points along the ray). Test corrections: a T-bar prints support-free both flange-down and standing on its end; the recommendation picks the shorter one.

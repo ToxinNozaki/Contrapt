@@ -7,6 +7,7 @@ import { convertTools } from './tools-convert.ts';
 import { feaTools } from './tools-fea.ts';
 import { importTools } from './tools-import.ts';
 import { knowledgeTools } from './tools-knowledge.ts';
+import { manufacturingTools } from './tools-manufacturing.ts';
 import { proofTools } from './tools-proof.ts';
 import { renderTools } from './tools-render.ts';
 
@@ -15,6 +16,7 @@ export const ALL_TOOLS: readonly ToolDef[] = [
   ...analysisTools,
   ...assemblyTools,
   ...feaTools,
+  ...manufacturingTools,
   ...proofTools,
   ...importTools,
   ...convertTools,

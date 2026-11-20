@@ -82,6 +82,12 @@ export { type BodyInfo, describeBody } from './measure.ts';
 export { type OptimizeInput, type OptimizeResult, optimizeParam, type Trial } from './optimize.ts';
 export { mirrorPlane, patternCopies, patternPositions } from './pattern.ts';
 export {
+  type OrientationResult,
+  type PrintCheckInput,
+  type PrintCheckResult,
+  printCheck,
+} from './printcheck.ts';
+export {
   encodePng,
   NAMED_VIEWS,
   type RenderOptions,
