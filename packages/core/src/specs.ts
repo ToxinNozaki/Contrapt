@@ -1,6 +1,6 @@
 // The Proof Loop's requirements-as-code: specs are saved WITH the model and re-checked after every change, so a design
 // is only "done" when every requirement passes against the real, rebuilt geometry. Beam specs are hand-calculation
-// estimates (closed-form), and say so; Contrapt does not run FEA yet.
+// estimates (closed-form), and say so; frame_analysis (FEA) is not wired into specs yet.
 import { z } from 'zod';
 import { type BeamSupport, beamWithSelfWeight } from './beam.ts';
 import type { Model } from './engine.ts';

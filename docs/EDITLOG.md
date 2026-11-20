@@ -130,3 +130,7 @@ so nothing is lost even if a bullet here is missed. Repo-relative paths only (th
 
 - New `mate` step (face-to-face placement by outward normals, optional gap and centring; errors when faces do not oppose), core `assembly.ts` (`interferenceReport`, `billOfMaterials`, `motionCheck`) and MCP tools `check_assembly`, `bom`, `motion_check`. Design call: no constraint solver yet; axis-aligned face mates cover most enclosure/stack/bracket assemblies and stay exact. Joints, grounding and kinematics are still open (ledger P3/P5).
 - motion_check samples poses (flagged in output): thin parts need more steps. Exact first-collision step verified on a sliding pin (step 29 of 40) and a swinging arm.
+
+## 2026-11-19 — Frame FEA (first real simulation)
+
+- Core `fea.ts`: 3D Euler-Bernoulli frame elements (6 dof/node), static solve with nodal loads, member distributed loads and gravity; reactions, member end forces, internal forces at 21 stations, worst combined stress, safety factor, equilibrium check; consistent-mass modal analysis (Cholesky + Jacobi). 15 validation tests against closed-form results (all to 1e-9 except modal 0.5

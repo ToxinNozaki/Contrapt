@@ -66,7 +66,7 @@ test('the Proof Loop end to end: requirements fail, the optimiser fixes the thic
   assert.match(bad.verdict, /1 OF 1 SPECS FAIL/);
   assert.equal(bad.results[0].status, 'FAIL');
   assert.equal(bad.results[0].estimate, true);
-  assert.match(bad.caveat, /not run FEA/);
+  assert.match(bad.caveat, /hand estimates/);
 
   // let the optimiser find the lightest arm that passes (hand value: 4.169 mm)
   await call('add_spec', { spec: { id: 'mass', kind: 'mass', body: 'arm', maxG: 60 } });
@@ -106,7 +106,7 @@ test('the Proof Loop end to end: requirements fail, the optimiser fixes the thic
   assert.match(readme, /All 2 requirements pass/);
   assert.match(readme, /\| arm \| 6061-T6 \|/);
   assert.match(readme, /decision.*Thinnest 6061 arm/);
-  assert.match(readme, /not run FEA|does not run FEA/);
+  assert.match(readme, /hand estimates/);
   const saved = JSON.parse(
     await readFile(join(outDir, 'buildpacks', 'Test_Arm', 'model.contrapt.json'), 'utf8'),
   );

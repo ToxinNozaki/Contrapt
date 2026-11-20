@@ -1,5 +1,5 @@
 // Hand-calculation analysis tools: cross-section properties, beam checks, column buckling.
-// These are textbook closed-form ESTIMATES. They say so in every result, and Contrapt does not run FEA yet.
+// These are textbook closed-form ESTIMATES. They say so in every result, and for real beam-element FEA use frame_analysis.
 import {
   BEAM_SUPPORTS,
   beamWithSelfWeight,

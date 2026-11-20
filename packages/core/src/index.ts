@@ -32,6 +32,19 @@ export { exportStep, exportStl, meshBodies, type ViewerMesh } from './export.ts'
 export { evalExpr, exprNames, type Num } from './expr.ts';
 export { type FaceNormal, type FoundFace, faceToWorld, findFace, uvAxes } from './faces.ts';
 export {
+  analyzeFrame,
+  DOFS,
+  type Dof,
+  type FrameInput,
+  type FrameMember,
+  type FrameNodalLoad,
+  type FrameResult,
+  type FrameSupport,
+  frameModes,
+  type MemberForces,
+  type ModalResult,
+} from './fea.ts';
+export {
   DIRECTIONS,
   holeTool,
   SCREW_SIZES,

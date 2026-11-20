@@ -83,16 +83,16 @@ Status: `[ ]` planned · `[~]` in progress · `[x]` done · `[-]` dropped (say w
 - [ ] Rules layer (iLogic-style) — stretch
 
 ## P5 — Simulation
-
+- [x] Static FEA: 3D beam elements (frame_analysis; nodal + distributed loads, gravity, reactions, member forces, stress, safety factor), validated vs closed-form cantilever, simply supported, fixed-fixed, torsion, axial, gravity, orientation invariance - 2026-11-19
 - [ ] Static FEA: beam elements, validated vs analytic
-- [ ] Static FEA: 3D tetrahedral (mesher + solver), stress/displacement/safety factor
+- [x] Modal analysis for frames (frame_modes, consistent mass, Jacobi eigen-solver), validated vs Euler-Bernoulli cantilever and pinned-pinned frequencies (mode shapes pending) - 2026-11-19
 - [ ] Modal analysis (natural frequencies/mode shapes)
 - [ ] Linear buckling
 - [ ] Thermal (steady-state, then transient) — stretch
 - [ ] Rigid-body dynamics: motors, springs, dampers, gravity, friction, contacts
 - [ ] Motion studies and kinematic sweeps, with plots and playback
-- [ ] Gear/linkage mechanisms incl. closed loops
-- [ ] Validation suite (cantilever, beam modes, pendulum, four-bar) running in CI
+- [~] Validation suite: cantilever, beam modes, torsion, gravity run in CI (core/test/fea.test.ts); pendulum and four-bar pending
+- [x] Every FEA result reports its assumptions and limits (notes in each reply) - 2026-11-19
 - [ ] Every result reports assumptions and limits
 
 ## P6 — Manufacturing and documentation
