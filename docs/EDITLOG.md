@@ -134,3 +134,7 @@ so nothing is lost even if a bullet here is missed. Repo-relative paths only (th
 ## 2026-11-19 — Frame FEA (first real simulation)
 
 - Core `fea.ts`: 3D Euler-Bernoulli frame elements (6 dof/node), static solve with nodal loads, member distributed loads and gravity; reactions, member end forces, internal forces at 21 stations, worst combined stress, safety factor, equilibrium check; consistent-mass modal analysis (Cholesky + Jacobi). 15 validation tests against closed-form results (all to 1e-9 except modal 0.5
+## 2026-11-19 — Frame FEA (first real simulation)
+
+- Core `fea.ts`: 3D Euler-Bernoulli frame elements (6 dof per node), static solve with nodal loads, member distributed loads and gravity; reactions, member end forces, internal forces at 21 stations, worst combined stress, safety factor, equilibrium check; consistent-mass modal analysis (Cholesky + Jacobi). 15 validation tests against closed-form results (1e-9 static, 0.5 percent modal). Two failing tests were wrong expectations, not solver errors: the second sorted mode was the strong axis, and portal-frame column shears differ 0.04 percent because the beam stretches axially.
+- MCP tools `frame_analysis` and `frame_modes` with round/rect/tube section presets (standard torsion constants) or a sketch id. All "does not simulate" statements updated: Contrapt still has NO solid FEA, thermal or dynamics.
