@@ -103,7 +103,7 @@ Status: `[ ]` planned · `[~]` in progress · `[x]` done · `[-]` dropped (say w
 - [ ] Plastic features: boss, rib, lip/groove, snap fit
 - [ ] 3D-print checker: overhangs, wall thickness, bridging, supports estimate
 - [ ] Laser/CNC export (DXF/SVG nests)
-- [ ] 2D drawings: views, sections, details, dimensions, title block, PDF/SVG/DXF
+- [~] 2D drawings: SVG sheet with third-angle front/top/right views, hidden lines, overall dimensions, auto standard scale and title block (drawing tool) done 2026-11-19; section views, detail views, hole/feature dimensions, tolerances, PDF and DXF pending
 - [ ] Standard parts library: fasteners, bearings, motors, extrusions, with real specs
 - [ ] Build Pack: BOM + cut list + files + assembly steps + manufacturability report
 

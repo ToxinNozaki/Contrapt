@@ -20,6 +20,7 @@ export {
   type LoadKind,
 } from './beam.ts';
 export { ModelBuilder, STEP_OPS } from './builder.ts';
+export { drawingSheet, type SheetOptions, type SheetResult } from './drawing.ts';
 export type { BuildOptions, FileProvider } from './engine.ts';
 export {
   type BuildReport,

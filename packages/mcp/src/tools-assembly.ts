@@ -1,11 +1,50 @@
 // Assembly tools: all-pairs interference, bill of materials, and motion-range sweeps.
-import { billOfMaterials, interferenceReport, motionCheck } from '@contrapt/core';
+import { mkdir, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
+import { billOfMaterials, drawingSheet, interferenceReport, motionCheck } from '@contrapt/core';
 import { z } from 'zod';
-import { j, type ToolDef } from './tools.ts';
+import { j, SafeName, type ToolDef } from './tools.ts';
 
 const Vec3 = z.tuple([z.number(), z.number(), z.number()]);
 
 export const assemblyTools: ToolDef[] = [
+  {
+    name: 'drawing',
+    description:
+      'Make a 2D drawing sheet (SVG, A4 landscape, mm) of the model or chosen bodies: third-angle front, top and right views from the exact geometry, dashed hidden lines, overall width/height/depth dimensions, an automatic standard scale, and a title block (title, number, material, mass, scale). Saved to drawings/<name>.svg in the output folder. Overall dimensions only: add tolerances and detail dimensions by hand.',
+    input: {
+      name: SafeName.optional().describe('file name without extension, default: model name'),
+      title: z.string().max(80).optional(),
+      number: z.string().max(40).optional().describe('drawing number for the title block'),
+      bodies: z.array(z.string()).optional().describe('body ids to draw (default: all)'),
+      hidden_lines: z.boolean().optional().describe('show dashed hidden lines (default true)'),
+    },
+    run: async (a, ctx) => {
+      const model = ctx.session.model;
+      if (!model || model.bodies.size === 0) throw new Error('The model has no bodies yet');
+      const tl = ctx.session.builder.toJSON();
+      const sheet = drawingSheet(model, {
+        bodies: a.bodies as string[] | undefined,
+        title: (a.title as string | undefined) ?? tl.name,
+        number: a.number as string | undefined,
+        hiddenLines: (a.hidden_lines as boolean | undefined) ?? true,
+      });
+      const name = SafeName.parse(
+        (a.name as string | undefined) ?? tl.name.replace(/[^A-Za-z0-9_-]/g, '_'),
+      );
+      const dir = join(ctx.outDir, 'drawings');
+      await mkdir(dir, { recursive: true });
+      await writeFile(join(dir, `${name}.svg`), sheet.svg);
+      return j({
+        file: `drawings/${name}.svg`,
+        scale: sheet.scale,
+        overall_mm: sheet.overall.map((x) => Math.round(x * 100) / 100),
+        views: sheet.views,
+        warnings: sheet.warnings,
+        note: 'Overall dimensions only; no tolerances or detail dimensions. Open the SVG in a browser or import it into any drawing tool.',
+      });
+    },
+  },
   {
     name: 'check_assembly',
     description:

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, before, test } from 'node:test';
@@ -89,4 +89,17 @@ test('assembly tools fail clearly', async () => {
   assert.match(text(await call('check_assembly', { bodies: ['base'] })), /at least two/);
   await call('new_model', { name: 'empty' });
   assert.match(text(await call('bom')), /no bodies/);
+});
+
+test('drawing writes an SVG sheet with the right dimensions and rejects bad names', async () => {
+  await call('new_model', { name: 'Plate' });
+  await call('add_step', { step: { op: 'box', id: 'p', w: 60, d: 30, h: 8 } });
+  await call('add_step', { step: { op: 'material', target: 'p', name: 'PETG' } });
+  const d = json(await call('drawing', { title: 'Plate', number: 'P-1' }));
+  assert.equal(d.file, 'drawings/Plate.svg');
+  assert.deepEqual(d.overall_mm, [60, 30, 8]);
+  const svg = await readFile(join(outDir, 'drawings', 'Plate.svg'), 'utf8');
+  assert.match(svg, /data-dim="width">60</);
+  assert.match(svg, /PETG/);
+  assert.match(text(await call('drawing', { name: '../x' })), /letters, digits/);
 });
