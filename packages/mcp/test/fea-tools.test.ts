@@ -198,3 +198,73 @@ test('frame tools fail clearly', async () => {
     /too thick/,
   );
 });
+
+test('solid_fea: a 120 x 6 x 6 aluminium cantilever through the tool matches beam theory, and warns about coarse grids', async () => {
+  await call('new_model', { name: 'solid' });
+  await call('add_step', { step: { op: 'box', id: 'p', w: 120, d: 6, h: 6, at: [60, 0, 0] } });
+  const r = json(
+    await call('solid_fea', {
+      body: 'p',
+      material: '6061-T6',
+      element_size_mm: 1,
+      supports: [{ region: { face: { normal: '-X' } } }],
+      loads: [{ region: { face: { normal: '+X' } }, force: [0, 0, -60] }],
+    }),
+  );
+  const I = (6 * 6 ** 3) / 12;
+  const expected = (60 * 120 ** 3) / (3 * 69000 * I);
+  assert.ok(
+    Math.abs(r.max_displacement.mm - expected) < 0.06 * expected,
+    `${r.max_displacement.mm} vs ${expected}`,
+  );
+  assert.equal(r.solver.converged, true);
+  assert.ok(r.equilibrium_error_N < 0.1);
+  assert.ok(r.von_mises_MPa.peak > r.von_mises_MPa.median);
+  assert.ok(r.safety_factor.p99 > 0);
+  assert.match(r.notes[0], /not a certification/);
+  assert.ok(Math.abs(r.mesh.volume_ratio - 1) < 1e-6);
+
+  // the default grid is chosen automatically and the same model still solves
+  const auto = json(
+    await call('solid_fea', {
+      body: 'p',
+      material: '6061-T6',
+      supports: [{ region: { face: { normal: '-X' } } }],
+      loads: [{ region: { face: { normal: '+X' } }, force: [0, 0, -60] }],
+    }),
+  );
+  assert.ok(auto.mesh.elements > 500 && auto.mesh.elements < 40000, `${auto.mesh.elements}`);
+  assert.ok(Math.abs(auto.max_displacement.mm - expected) < 0.2 * expected);
+
+  // a too-coarse grid is called out
+  const coarse = json(
+    await call('solid_fea', {
+      body: 'p',
+      material: '6061-T6',
+      element_size_mm: 3,
+      supports: [{ region: { face: { normal: '-X' } } }],
+      loads: [{ region: { face: { normal: '+X' } }, force: [0, 0, -60] }],
+    }),
+  );
+  assert.ok((coarse.warnings ?? []).some((w: string) => /elements across/.test(w)));
+  assert.match(
+    text(
+      await call('solid_fea', {
+        body: 'zz',
+        material: 'PLA',
+        supports: [{ region: { face: { normal: '-X' } } }],
+      }),
+    ),
+    /No body "zz"/,
+  );
+  assert.match(
+    text(
+      await call('solid_fea', {
+        body: 'p',
+        material: 'TPU',
+        supports: [{ region: { face: { normal: '-X' } } }],
+      }),
+    ),
+    /no modulus/,
+  );
+});

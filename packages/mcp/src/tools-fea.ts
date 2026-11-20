@@ -9,6 +9,7 @@ import {
   getMaterial,
   MATERIAL_NAMES,
   sectionProperties,
+  solidFea,
 } from '@contrapt/core';
 import { z } from 'zod';
 import { j, type ToolContext, type ToolDef } from './tools.ts';
@@ -191,10 +192,131 @@ function toFrame(ctx: ToolContext, a: Record<string, unknown>): FrameInput {
   };
 }
 
+const Region = z
+  .union([
+    z.object({
+      face: z.object({
+        normal: z.enum(['+X', '-X', '+Y', '-Y', '+Z', '-Z']),
+        near: Vec3.optional().describe('pick the matching flat face closest to this point'),
+      }),
+    }),
+    z.object({ box: z.object({ min: Vec3, max: Vec3 }) }),
+  ])
+  .describe(
+    'where: a flat face of the body picked by outward normal, or a world box (mm) that selects the nodes inside it',
+  );
+
 const NOTE =
   'Linear-elastic rigid-jointed frame of beam elements (Euler-Bernoulli). Member stress = axial + bending only: no shear stress, no stress concentrations at joints, holes or welds, no buckling or fatigue. Mesh long members into several elements (nodes) wherever you need results between joints. An estimate for sizing, validated against textbook beam results; not a certification.';
 
 export const feaTools: ToolDef[] = [
+  {
+    name: 'solid_fea',
+    description:
+      'Static stress and displacement analysis of a SOLID body (3D linear elasticity on a voxel grid of 8-node hexahedra with incompatible modes; matrix-free CG solver). Give supports (a face or box held fixed; optional dofs x/y/z), loads (a face or box + total force in N), optional gravity, and a library material. Returns max displacement, max and 99th-percentile von Mises stress with locations, safety factors vs yield, reactions, equilibrium check, grid quality (volume ratio) and solver convergence. Stair-stepped boundaries make stresses at holes, fillets and corners approximate and mesh-dependent: displacements are reliable, peak stress is a guide; refine with element_size_mm and compare. Validated against beam theory and the frame solver. Typical runs take seconds; keep the grid under about 40k elements.',
+    input: {
+      body: z.string(),
+      material: z.enum(MATERIAL_NAMES),
+      supports: z
+        .array(z.object({ region: Region, dofs: z.array(z.enum(['x', 'y', 'z'])).optional() }))
+        .min(1),
+      loads: z
+        .array(z.object({ region: Region, force: Vec3.describe('total force on the region, N') }))
+        .optional(),
+      gravity: z.boolean().optional().describe('add self weight (down, -Z)'),
+      element_size_mm: z
+        .number()
+        .positive()
+        .optional()
+        .describe(
+          'grid cell size; default chosen from the part size (about 12k elements, at least 4 across the thinnest direction)',
+        ),
+    },
+    readOnly: true,
+    run: async (a, ctx) => {
+      const model = ctx.session.model;
+      if (!model) throw new Error('Nothing built yet');
+      const id = a.body as string;
+      const shape = model.bodies.get(id);
+      const info = model.report.bodies[id];
+      if (!shape || !info)
+        throw new Error(`No body "${id}". Bodies: ${[...model.bodies.keys()].join(', ')}`);
+      const mat = getMaterial(a.material as string);
+      if (!mat.youngsModulusGPa) throw new Error(`${a.material} has no modulus in the library`);
+      const minDim = Math.min(...info.bbox.size.filter((x) => x > 1e-6));
+      let h = a.element_size_mm as number | undefined;
+      if (h === undefined) {
+        h = Math.min(Math.cbrt(info.volume / 12000), minDim / 4);
+        // never exceed ~40k elements by default
+        while (info.volume / h ** 3 > 40000) h *= 1.1;
+        h = Math.round(h * 1000) / 1000;
+      }
+      const t0 = Date.now();
+      const r = solidFea({
+        shape,
+        E: mat.youngsModulusGPa * 1000,
+        yield: mat.yieldMPa,
+        density: mat.density,
+        elementSize: h,
+        supports: a.supports as never,
+        loads: a.loads as never,
+        gravity: a.gravity as boolean | undefined,
+      });
+      const warn = [...r.warnings];
+      if (Math.abs(r.volumeRatio - 1) > 0.05)
+        warn.push(
+          `The grid volume is ${Math.round((r.volumeRatio - 1) * 1000) / 10}% off the true volume: curved or thin features are poorly represented; reduce element_size_mm`,
+        );
+      if (minDim / h < 3)
+        warn.push(
+          `The thinnest direction is only ${Math.round((minDim / h) * 10) / 10} elements across: bending results will be too stiff or noisy; reduce element_size_mm`,
+        );
+      const sf = r.safetyFactorP99;
+      return j({
+        verdict:
+          sf === undefined
+            ? 'no yield data'
+            : sf >= 2
+              ? `safety factor ${round(sf, 2)} on the 99th-percentile stress (peak ${round(r.safetyFactorPeak ?? 0, 2)}): ok for static loads, if the mesh is good`
+              : `safety factor ${round(sf, 2)} on the 99th-percentile stress (peak ${round(r.safetyFactorPeak ?? 0, 2)}): BELOW 2, marginal or failing`,
+        max_displacement: {
+          mm: round(r.maxDisplacement.value, 5),
+          at_mm: roundAll(r.maxDisplacement.at, 2),
+        },
+        von_mises_MPa: {
+          peak: round(r.maxVonMises.value, 3),
+          peak_at_mm: roundAll(r.maxVonMises.at, 2),
+          p99: round(r.p99VonMises, 3),
+          median: round(r.medianVonMises, 3),
+          yield: mat.yieldMPa,
+        },
+        safety_factor: {
+          p99: sf === undefined ? undefined : round(sf, 2),
+          peak: r.safetyFactorPeak === undefined ? undefined : round(r.safetyFactorPeak, 2),
+        },
+        reaction_N: roundAll(r.reaction, 3),
+        equilibrium_error_N: Number(r.equilibriumErrorN.toExponential(2)),
+        strain_energy_J: Number(r.strainEnergyJ.toPrecision(4)),
+        mesh: {
+          element_size_mm: r.elementSizeMm,
+          elements: r.elements,
+          nodes: r.nodes,
+          grid: r.grid,
+          volume_ratio: round(r.volumeRatio, 4),
+        },
+        solver: {
+          converged: r.converged,
+          iterations: r.iterations,
+          relative_residual: Number(r.relativeResidual.toExponential(2)),
+          seconds: round((Date.now() - t0) / 1000, 2),
+        },
+        ...(warn.length ? { warnings: warn } : {}),
+        notes: [
+          'Linear elastic, small deflection, perfect bonding, supports and loads as chosen. Voxel (stair-stepped) boundaries: stresses at curved surfaces, holes, fillets and sharp corners are approximate; fixed faces and point loads create artificial stress spikes (the 99th percentile ignores single-element spikes). Displacements converge faster than stresses: halve element_size_mm and compare before trusting a peak. No fatigue, buckling, contact or plasticity. An estimate for sizing, not a certification.',
+        ],
+      });
+    },
+  },
   {
     name: 'frame_analysis',
     description:

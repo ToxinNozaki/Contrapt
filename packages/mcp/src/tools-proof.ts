@@ -15,7 +15,7 @@ import { z } from 'zod';
 import { feedback, j, SafeName, type ToolDef } from './tools.ts';
 
 const HAND_ESTIMATE =
-  'Beam specs are closed-form hand estimates (frame_analysis runs real beam-element FEA but specs do not use it yet); Contrapt does not run solid FEA, thermal or dynamic simulation. Measured geometry (dimensions, volume, mass, interference, gaps) is exact.';
+  'Beam specs are closed-form hand estimates (frame_analysis and solid_fea run real FEA but specs do not use them yet); Contrapt does not run thermal, fatigue, buckling or dynamic simulation. Measured geometry (dimensions, volume, mass, interference, gaps) is exact.';
 
 function lines(results: SpecResult[]) {
   return results.map((r) => ({

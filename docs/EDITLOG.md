@@ -146,3 +146,10 @@ so nothing is lost even if a bullet here is missed. Repo-relative paths only (th
 ## 2026-11-19 — 3D-print checker
 
 - Core `printcheck.ts` and MCP tool `print_check`: tessellates the exact body, computes overhang area and a support-volume upper bound for six axis-aligned orientations, recommends one (fits the build volume first, then least support, then shortest), bed contact, and local wall thickness by casting rays along the inward normal (up to 800 samples). Bug caught by the first test run: the far-wall filter had the normal sign backwards (a ray exits through a surface whose outward normal points along the ray). Test corrections: a T-bar prints support-free both flange-down and standing on its end; the recommendation picks the shorter one.
+
+## 2026-11-19 — Solid FEA (voxel)
+
+- Core `solidfea.ts` and MCP tool `solid_fea`: regular grid of 8-node hexahedra with Wilson-Taylor incompatible modes (no bending locking; one condensed 24x24 element matrix because all bricks are identical), matrix-free Jacobi-preconditioned CG, voxelisation by +Z ray parity on the tessellation, supports/loads on faces or boxes, gravity, von Mises per element (Gauss-point average), p99 and peak stress, reactions, equilibrium check, volume ratio of the grid.
+- Validation: axial bar (elongation, uniform stress), slender cantilever vs beam + shear theory (within 5%), mid-span stress, refinement convergence, self-weight sag vs the independent frame solver, plate with hole (broad Kt band), unsupported rigid-body motion warning. Findings worth keeping: clamped-root face stiffens a short bar by 5-10% (ratio to theory 0.90 at L/h 10, 0.97 at L/h 40); element-averaged stress sits at element mid-depth, not the extreme fibre.
+- Bug found by the MCP-level test: cubic cells that do not divide the bounding box shrank a 6 mm section to 5.69 mm (about 17% too soft). Fixed by letting the cell size differ slightly per axis so the grid spans the bounding box exactly; regression test added.
+- Honest scope stays in every reply: stair-stepped boundaries, approximate peak stress at holes/fillets/corners, no fatigue/buckling/contact/plasticity.

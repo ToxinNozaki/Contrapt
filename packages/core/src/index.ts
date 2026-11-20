@@ -99,6 +99,14 @@ export { compileScript, type ScriptOptions } from './script.ts';
 export { type SectionProps, sectionProperties } from './section.ts';
 export { as3D } from './shapes.ts';
 export {
+  type SolidFeaInput,
+  type SolidFeaResult,
+  type SolidLoad,
+  type SolidRegion,
+  type SolidSupport,
+  solidFea,
+} from './solidfea.ts';
+export {
   evaluateSpec,
   evaluateSpecs,
   type JournalEntry,

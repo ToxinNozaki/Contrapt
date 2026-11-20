@@ -84,16 +84,16 @@ Status: `[ ]` planned · `[~]` in progress · `[x]` done · `[-]` dropped (say w
 
 ## P5 — Simulation
 - [x] Static FEA: 3D beam elements (frame_analysis; nodal + distributed loads, gravity, reactions, member forces, stress, safety factor), validated vs closed-form cantilever, simply supported, fixed-fixed, torsion, axial, gravity, orientation invariance - 2026-11-19
-- [ ] Static FEA: beam elements, validated vs analytic
+- [~] Static FEA for solids: voxel hexahedra with incompatible modes + matrix-free CG (solid_fea), validated vs beam theory and the frame solver; displacements reliable, peak stress approximate at holes/corners - 2026-11-19. Body-fitted tetrahedral mesher (accurate stress at curved boundaries) still pending
 - [x] Modal analysis for frames (frame_modes, consistent mass, Jacobi eigen-solver), validated vs Euler-Bernoulli cantilever and pinned-pinned frequencies (mode shapes pending) - 2026-11-19
-- [ ] Modal analysis (natural frequencies/mode shapes)
+- [ ] Modal mode shapes, and modal analysis of solids (frame natural frequencies done)
 - [ ] Linear buckling
 - [ ] Thermal (steady-state, then transient) — stretch
 - [ ] Rigid-body dynamics: motors, springs, dampers, gravity, friction, contacts
 - [ ] Motion studies and kinematic sweeps, with plots and playback
 - [~] Validation suite: cantilever, beam modes, torsion, gravity run in CI (core/test/fea.test.ts); pendulum and four-bar pending
 - [x] Every FEA result reports its assumptions and limits (notes in each reply) - 2026-11-19
-- [ ] Every result reports assumptions and limits
+- [x] Every result reports assumptions and limits (frame_analysis, solid_fea, beam_check, print_check all carry notes) - 2026-11-19
 
 ## P6 — Manufacturing and documentation
 
