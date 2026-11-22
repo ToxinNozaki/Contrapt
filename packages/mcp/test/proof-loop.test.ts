@@ -150,3 +150,57 @@ test('proof tools fail clearly: no specs, bad ids, unwritable pack name, failing
     /No requirements were written/,
   );
 });
+
+test('FEA-backed specs: pending in the live status, run by check_specs, and visible to the viewer as pending until then', async () => {
+  await call('new_model', { name: 'FEA Arm' });
+  await call('add_step', {
+    step: { op: 'sketch', id: 'sec', plane: 'XY', profile: [{ shape: 'rect', w: 20, h: 6 }] },
+  });
+  await call('add_step', { step: { op: 'extrude', id: 'arm', sketch: 'sec', distance: 100 } });
+  const nodes = { n0: [0, 0, 0], n1: [50, 0, 0], n2: [100, 0, 0] };
+  const members = [
+    { id: 'a', a: 'n0', b: 'n1', material: '6061-T6', section: { sketch: 'sec' } },
+    { id: 'b', a: 'n1', b: 'n2', material: '6061-T6', section: { sketch: 'sec' } },
+  ];
+  const added = json(
+    await call('add_spec', {
+      spec: {
+        id: 'tip-fea',
+        kind: 'frame',
+        frame: {
+          nodes,
+          members,
+          supports: [{ node: 'n0', fix: 'fixed' }],
+          loads: [{ node: 'n2', force: [0, 0, -50] }],
+        },
+        maxDisplacementMm: 1,
+        minSafetyFactor: 4,
+      },
+    }),
+  );
+  // heavy analysis is not run on every reply: it is pending, not failing
+  assert.deepEqual(added.specs.pending_run_check_specs, ['tip-fea']);
+  assert.equal(added.specs.failing, undefined);
+  const full = json(await call('check_specs'));
+  assert.equal(full.verdict, 'ALL SPECS PASS');
+  assert.equal(full.results[0].fea, true);
+  assert.match(full.results[0].detail, /max displacement \(n2\) 0\.67/);
+  assert.match(full.caveat, /finite-element/);
+  // a tighter requirement fails with the FEA number in the reason
+  await call('add_spec', {
+    spec: {
+      id: 'tip-fea',
+      kind: 'frame',
+      frame: {
+        nodes,
+        members,
+        supports: [{ node: 'n0', fix: 'fixed' }],
+        loads: [{ node: 'n2', force: [0, 0, -50] }],
+      },
+      maxDisplacementMm: 0.4,
+    },
+  });
+  const bad = json(await call('check_specs'));
+  assert.match(bad.verdict, /1 OF 1 SPECS FAIL/);
+  assert.match(bad.results[0].detail, /EXCEEDS max 0\.4/);
+});

@@ -73,6 +73,7 @@ Status: `[ ]` planned · `[~]` in progress · `[x]` done · `[-]` dropped (say w
 ## P4 — Proof Loop (differentiator)
 
 - [x] Spec language (requirements-as-code, saved with the model): dimension, mass, volume, no_interference, min_gap, beam (hand-estimate, flagged); simulation-backed kinds pending real FEA - 2026-11-17
+- [x] FEA-backed specs: `frame` (displacement, safety factor, buckling factor, frequency) and `solid_fea` (displacement, safety factor on p99 stress) run real finite-element analyses; shown as PENDING in the live status after each change and run by check_specs, optimize_param and build_pack; the optimiser can drive them - 2026-11-23
 - [x] `check_specs` + live spec verdict in every tool reply - 2026-11-17
 - [x] `optimize_param`: one-parameter sweep + bisection over real rebuilds against specs (multi-parameter pending) - 2026-11-17
 - [x] Design Journal (journal_add/get_journal, saved with the model, included in the Build Pack); per-iteration renders and metrics pending - 2026-11-17

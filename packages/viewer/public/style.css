@@ -441,6 +441,9 @@ body.rail-hidden #tools {
 #specs li.fail .state {
   color: var(--err);
 }
+#specs li.pending .state {
+  color: var(--muted);
+}
 #specs .why,
 #specs .detail,
 #journal .when {

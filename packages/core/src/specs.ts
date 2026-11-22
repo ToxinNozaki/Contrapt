@@ -4,9 +4,17 @@
 import { z } from 'zod';
 import { type BeamSupport, beamWithSelfWeight } from './beam.ts';
 import type { Model } from './engine.ts';
+import { analyzeFrame, frameBuckling, frameModes } from './fea.ts';
+import {
+  buildFrameInput,
+  FrameDefSchema,
+  SolidLoadSchema,
+  SolidSupportSchema,
+} from './framebuild.ts';
 import { checkInterference } from './interference.ts';
 import { getMaterial, MATERIAL_NAMES } from './materials.ts';
 import { sectionProperties } from './section.ts';
+import { defaultSolidElementSize, solidFea } from './solidfea.ts';
 
 const Id = z
   .string()
@@ -72,6 +80,31 @@ export const SpecSchema = z.discriminatedUnion('kind', [
     maxDeflectionMm: z.number().optional(),
     minSpanOverDeflection: z.number().optional().describe('e.g. 360'),
   }),
+  z.object({
+    ...common,
+    kind: z.literal('frame'),
+    frame: FrameDefSchema.describe(
+      'a 3D beam-element frame (same definition as the frame_analysis tool): real FEA, run when you call check_specs',
+    ),
+    maxDisplacementMm: z.number().optional(),
+    minSafetyFactor: z.number().optional().describe('worst member, against yield'),
+    minBucklingFactor: z.number().optional().describe('lowest Euler load factor, e.g. 3'),
+    minFrequencyHz: z.number().optional().describe('lowest natural frequency'),
+  }),
+  z.object({
+    ...common,
+    kind: z.literal('solid_fea'),
+    body: z.string().describe('a body with a material'),
+    supports: z.array(SolidSupportSchema).min(1),
+    loads: z.array(SolidLoadSchema).optional(),
+    gravity: z.boolean().optional(),
+    elementSizeMm: z.number().positive().optional().describe('default: about 12k elements'),
+    maxDisplacementMm: z.number().optional(),
+    minSafetyFactor: z
+      .number()
+      .optional()
+      .describe('against yield, on the 99th-percentile von Mises stress'),
+  }),
 ]);
 export type Spec = z.infer<typeof SpecSchema>;
 
@@ -93,6 +126,17 @@ export interface SpecResult {
   marginPct?: number;
   /** True when the number is a hand-calculation estimate rather than measured geometry. */
   estimate?: boolean;
+  /** True when the number comes from a finite-element analysis. */
+  fea?: boolean;
+  /** A heavy analysis that was not run (live status): call check_specs to run it. Counts as not passing. */
+  pending?: boolean;
+}
+
+/** Spec kinds that run a finite-element analysis: seconds, not milliseconds. */
+export const HEAVY_KINDS: readonly Spec['kind'][] = ['frame', 'solid_fea'];
+export interface EvaluateOptions {
+  /** skip heavy analyses and report them as pending (used for the live verdict after every change) */
+  live?: boolean;
 }
 
 const r = (x: number, d = 4) => Math.round(x * 10 ** d) / 10 ** d;
@@ -145,10 +189,124 @@ function body(model: Model, id: string) {
   return b;
 }
 
-export function evaluateSpec(model: Model, spec: Spec): SpecResult {
+export function evaluateSpec(model: Model, spec: Spec, opts: EvaluateOptions = {}): SpecResult {
   const base = { id: spec.id, kind: spec.kind, description: spec.description };
+  if (opts.live && HEAVY_KINDS.includes(spec.kind))
+    return {
+      ...base,
+      ok: false,
+      pending: true,
+      fea: true,
+      summary: 'finite-element analysis not run yet (it takes seconds): call check_specs',
+    };
   try {
     switch (spec.kind) {
+      case 'frame': {
+        const input = buildFrameInput(spec.frame, model.sketches);
+        const st = analyzeFrame(input);
+        const limits: Limit[] = [];
+        if (spec.maxDisplacementMm !== undefined)
+          limits.push({
+            label: `max displacement (${st.maxDisplacement.node})`,
+            actual: st.maxDisplacement.value,
+            max: spec.maxDisplacementMm,
+            unit: 'mm',
+          });
+        if (spec.minSafetyFactor !== undefined) {
+          const sf = st.worstMember?.safetyFactor;
+          if (sf === undefined)
+            throw new Error('no yield strength for the members: cannot compute a safety factor');
+          limits.push({
+            label: `worst member ${st.worstMember?.id} safety factor`,
+            actual: sf,
+            min: spec.minSafetyFactor,
+            unit: '(vs yield)',
+          });
+        }
+        let note = '';
+        if (spec.minBucklingFactor !== undefined) {
+          const bk = frameBuckling(input, 1);
+          if (bk.tensionOnly) note = '; no member in compression, nothing to buckle';
+          else
+            limits.push({
+              label: 'lowest buckling load factor',
+              actual: bk.loadFactors[0] ?? Number.POSITIVE_INFINITY,
+              min: spec.minBucklingFactor,
+              unit: 'x load',
+            });
+        }
+        if (spec.minFrequencyHz !== undefined) {
+          const f = frameModes(input, 1).frequencies[0];
+          if (f === undefined) throw new Error('no natural frequency found');
+          limits.push({
+            label: 'lowest natural frequency',
+            actual: f,
+            min: spec.minFrequencyHz,
+            unit: 'Hz',
+          });
+        }
+        if (limits.length === 0 && !note)
+          throw new Error(
+            'a frame spec needs at least one of maxDisplacementMm, minSafetyFactor, minBucklingFactor, minFrequencyHz',
+          );
+        const j = limits.length ? judge(limits) : { ok: true, summary: 'no checks apply' };
+        return { ...base, ...j, summary: j.summary + note, fea: true };
+      }
+      case 'solid_fea': {
+        const shape = model.bodies.get(spec.body);
+        const info = model.report.bodies[spec.body];
+        if (!shape || !info) body(model, spec.body);
+        const matName = model.materials.get(spec.body);
+        if (!matName) throw new Error(`${spec.body} has no material: add a material step`);
+        const mat = getMaterial(matName);
+        if (!mat.youngsModulusGPa) throw new Error(`${matName} has no modulus in the library`);
+        const r0 = solidFea({
+          shape: shape as NonNullable<typeof shape>,
+          E: mat.youngsModulusGPa * 1000,
+          yield: mat.yieldMPa,
+          density: mat.density,
+          elementSize:
+            spec.elementSizeMm ??
+            defaultSolidElementSize(
+              (info as NonNullable<typeof info>).volume,
+              (info as NonNullable<typeof info>).bbox.size,
+            ),
+          supports: spec.supports as never,
+          loads: spec.loads as never,
+          gravity: spec.gravity,
+        });
+        const limits: Limit[] = [];
+        if (spec.maxDisplacementMm !== undefined)
+          limits.push({
+            label: 'max displacement',
+            actual: r0.maxDisplacement.value,
+            max: spec.maxDisplacementMm,
+            unit: 'mm',
+          });
+        if (spec.minSafetyFactor !== undefined) {
+          if (r0.safetyFactorP99 === undefined)
+            throw new Error('no yield strength: cannot compute a safety factor');
+          limits.push({
+            label: 'safety factor (p99 stress)',
+            actual: r0.safetyFactorP99,
+            min: spec.minSafetyFactor,
+            unit: '(vs yield)',
+          });
+        }
+        if (limits.length === 0)
+          throw new Error('a solid_fea spec needs maxDisplacementMm and/or minSafetyFactor');
+        const j = judge(limits);
+        const warn = r0.converged
+          ? ''
+          : '; WARNING: the solver did not converge, result unreliable';
+        return {
+          ...base,
+          ...j,
+          summary: `${j.summary} [${r0.elements} elements${warn}]`,
+          ok: j.ok && r0.converged,
+          fea: true,
+        };
+      }
       case 'dimension': {
         const b = body(model, spec.body);
         const i = { x: 0, y: 1, z: 2 }[spec.axis];
@@ -285,16 +443,23 @@ export interface SpecReport {
   allPass: boolean;
   total: number;
   passing: number;
+  /** heavy analyses skipped because this was a live evaluation */
+  pending: number;
   results: SpecResult[];
 }
 
-export function evaluateSpecs(model: Model, specs: readonly Spec[]): SpecReport {
-  const results = specs.map((s) => evaluateSpec(model, s));
+export function evaluateSpecs(
+  model: Model,
+  specs: readonly Spec[],
+  opts: EvaluateOptions = {},
+): SpecReport {
+  const results = specs.map((s) => evaluateSpec(model, s, opts));
   const passing = results.filter((x) => x.ok).length;
   return {
     allPass: results.length > 0 && passing === results.length,
     total: results.length,
     passing,
+    pending: results.filter((x) => x.pending).length,
     results,
   };
 }

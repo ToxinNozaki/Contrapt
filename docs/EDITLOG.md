@@ -182,3 +182,9 @@ so nothing is lost even if a bullet here is missed. Repo-relative paths only (th
 ## 2026-11-22 — Release polish: README, SETUP, screenshots
 
 - README rewritten as a front page: the Proof Loop, screenshots of the real viewer (materials and labels, selection card, live Requirements panel, section view), quick start, the 45 tools by area, a "how far to trust the numbers" table (what each analysis is checked against) and the limits stated plainly. SETUP tool table updated to all tools and playbooks. Screenshots are in docs/images, with a sample drawing sheet. GitHub topics were already set (20).
+
+## 2026-11-23 — FEA inside the Proof Loop
+
+- Shared definitions moved to core `framebuild.ts` (frame definition with library materials and section presets or a sketch, solid regions, `buildFrameInput`) so the MCP tools and the specs use one source. New spec kinds `frame` and `solid_fea`; `defaultSolidElementSize` shared by the tool and the spec.
+- Heavy specs are skipped in the live status (after every tool reply and in the viewer snapshot) and shown as PENDING, not failing; check_specs, optimize_param and build_pack run them. Because a frame spec can take its section from a model sketch, the optimiser tunes a parameter against real FEA: the thinnest arm whose frame deflects under 2 mm lands on the beam-theory value 4.169 mm.
+- Viewer shows PENDING and an FEA tag. The check_specs caveat now covers FEA specs.

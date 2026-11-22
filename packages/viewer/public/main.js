@@ -504,21 +504,23 @@ function renderSpecs() {
   const ul = $('specs');
   ul.replaceChildren();
   if (specs) {
-    $('specs-count').textContent = `${specs.passing} of ${specs.total} pass`;
+    $('specs-count').textContent =
+      `${specs.passing} of ${specs.total} pass` +
+      (specs.pending ? `, ${specs.pending} pending` : '');
     for (const r of specs.results) {
       const li = document.createElement('li');
-      li.className = r.ok ? 'pass' : 'fail';
+      li.className = r.pending ? 'pending' : r.ok ? 'pass' : 'fail';
       const state = document.createElement('span');
       state.className = 'state';
-      state.textContent = r.ok ? 'PASS' : 'FAIL';
+      state.textContent = r.pending ? 'PENDING' : r.ok ? 'PASS' : 'FAIL';
       const id = document.createElement('span');
       id.className = 'sid';
       id.textContent = r.id;
       li.append(state, id);
-      if (r.estimate) {
+      if (r.estimate || r.fea) {
         const e = document.createElement('span');
         e.className = 'est';
-        e.textContent = 'hand estimate';
+        e.textContent = r.estimate ? 'hand estimate' : 'FEA';
         li.appendChild(e);
       }
       if (r.description) {

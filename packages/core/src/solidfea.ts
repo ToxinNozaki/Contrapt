@@ -953,3 +953,14 @@ export function solidFea(inp: SolidFeaInput): SolidFeaResult {
     warnings,
   };
 }
+
+/**
+ * A sensible grid size for a body: about 12k elements, at least 4 across the thinnest direction, never more than
+ * about 40k elements. Shared by the solid_fea tool and the solid_fea spec so both mesh the same way.
+ */
+export function defaultSolidElementSize(volume: number, bboxSize: readonly number[]): number {
+  const minDim = Math.min(...bboxSize.filter((x) => x > 1e-6));
+  let h = Math.min(Math.cbrt(volume / 12000), minDim / 4);
+  while (volume / h ** 3 > 40000) h *= 1.1;
+  return Math.round(h * 1000) / 1000;
+}

@@ -15,7 +15,7 @@ import { z } from 'zod';
 import { feedback, j, SafeName, type ToolDef } from './tools.ts';
 
 const HAND_ESTIMATE =
-  'Beam specs are closed-form hand estimates (frame_analysis and solid_fea run real FEA but specs do not use them yet); Contrapt does not run thermal, fatigue, buckling or dynamic simulation. Measured geometry (dimensions, volume, mass, interference, gaps) is exact.';
+  'Beam specs are closed-form hand estimates; frame and solid_fea specs run real finite-element analysis (beam elements, and a fitted hexahedral grid whose peak stress at sharp corners is approximate). Contrapt does not run thermal, fatigue or dynamic simulation. Measured geometry (dimensions, volume, mass, interference, gaps) is exact.';
 
 function lines(results: SpecResult[]) {
   return results.map((r) => ({
@@ -26,6 +26,7 @@ function lines(results: SpecResult[]) {
     detail: r.summary,
     ...(r.marginPct !== undefined ? { margin_pct: r.marginPct } : {}),
     ...(r.estimate ? { estimate: true } : {}),
+    ...(r.fea ? { fea: true } : {}),
   }));
 }
 
@@ -33,7 +34,7 @@ export const proofTools: ToolDef[] = [
   {
     name: 'add_spec',
     description:
-      'Add (or replace, same id) a requirement the design must meet. Saved with the model and re-checked after every change. kinds: dimension {body, axis x|y|z, min?, max?}; mass {body, minG?, maxG?}; volume {body, minMm3?, maxMm3?}; no_interference {a, b, allowTouching?}; min_gap {a, b, minMm}; beam {sketch, support, load, value, lengthMm, material, minSafetyFactor?, maxDeflectionMm?, minSpanOverDeflection?, bend?, selfWeight?}. Write specs BEFORE modelling, from the stated needs.',
+      'Add (or replace, same id) a requirement the design must meet. Saved with the model and re-checked after every change. kinds: dimension {body, axis x|y|z, min?, max?}; mass {body, minG?, maxG?}; volume {body, minMm3?, maxMm3?}; no_interference {a, b, allowTouching?}; min_gap {a, b, minMm}; beam {sketch, support, load, value, lengthMm, material, minSafetyFactor?, maxDeflectionMm?, minSpanOverDeflection?, bend?, selfWeight?} (hand estimate); frame {frame: same definition as frame_analysis, maxDisplacementMm?, minSafetyFactor?, minBucklingFactor?, minFrequencyHz?} and solid_fea {body, supports, loads?, gravity?, elementSizeMm?, maxDisplacementMm?, minSafetyFactor?} run real FEA (seconds): they show as PENDING in the live status after each change and are run by check_specs, optimize_param and build_pack. Write specs BEFORE modelling, from the stated needs.',
     input: { spec: SpecSchema },
     run: async (a, ctx) => {
       const id = ctx.session.builder.addSpec(a.spec);
@@ -70,7 +71,7 @@ export const proofTools: ToolDef[] = [
           : `${rep.total - rep.passing} OF ${rep.total} SPECS FAIL`,
         passing: `${rep.passing}/${rep.total}`,
         results: lines(rep.results),
-        ...(rep.results.some((r) => r.estimate) ? { caveat: HAND_ESTIMATE } : {}),
+        ...(rep.results.some((r) => r.estimate || r.fea) ? { caveat: HAND_ESTIMATE } : {}),
         ...(rep.allPass
           ? { next: 'Record the decision with journal_add, then build_pack when ready to make it.' }
           : {

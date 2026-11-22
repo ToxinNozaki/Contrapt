@@ -24,6 +24,8 @@ export interface Snapshot {
   specs?: {
     total: number;
     passing: number;
+    /** heavy FEA specs not run in the live view: check_specs runs them */
+    pending: number;
     results: {
       id: string;
       kind: string;
@@ -31,6 +33,8 @@ export interface Snapshot {
       summary: string;
       description?: string;
       estimate?: boolean;
+      fea?: boolean;
+      pending?: boolean;
     }[];
   };
 }
@@ -113,10 +117,11 @@ export class Session {
     if (specs.length === 0 || !this.model) return undefined;
     const key = `${this.version}|${JSON.stringify(specs)}`;
     if (this.specCache?.key === key) return this.specCache.value;
-    const rep = evaluateSpecs(this.model, specs);
+    const rep = evaluateSpecs(this.model, specs, { live: true });
     const value = {
       total: rep.total,
       passing: rep.passing,
+      pending: rep.pending,
       results: rep.results.map((r) => ({
         id: r.id,
         kind: r.kind,
@@ -124,6 +129,8 @@ export class Session {
         summary: r.summary,
         ...(r.description ? { description: r.description } : {}),
         ...(r.estimate ? { estimate: true } : {}),
+        ...(r.fea ? { fea: true } : {}),
+        ...(r.pending ? { pending: true } : {}),
       })),
     };
     this.specCache = { key, value };

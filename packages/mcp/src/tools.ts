@@ -99,15 +99,16 @@ function specStatus(ctx: ToolContext) {
   const specs = ctx.session.builder.specs;
   const model = ctx.session.model;
   if (specs.length === 0 || !model) return {};
-  const rep = evaluateSpecs(model, specs);
-  const failing = rep.results.filter((r) => !r.ok);
+  const rep = evaluateSpecs(model, specs, { live: true });
+  const failing = rep.results.filter((r) => !r.ok && !r.pending);
+  const pending = rep.results.filter((r) => r.pending).map((r) => r.id);
+  if (rep.allPass) return { specs: `all ${rep.total} pass` };
   return {
-    specs: rep.allPass
-      ? `all ${rep.total} pass`
-      : {
-          passing: `${rep.passing}/${rep.total}`,
-          failing: failing.map((r) => ({ id: r.id, detail: r.summary })),
-        },
+    specs: {
+      passing: `${rep.passing}/${rep.total}`,
+      ...(failing.length ? { failing: failing.map((r) => ({ id: r.id, detail: r.summary })) } : {}),
+      ...(pending.length ? { pending_run_check_specs: pending } : {}),
+    },
   };
 }
 

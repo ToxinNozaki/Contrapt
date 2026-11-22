@@ -49,6 +49,20 @@ export {
   type ModalResult,
 } from './fea.ts';
 export {
+  buildFrameInput,
+  type FrameDef,
+  FrameDefSchema,
+  FrameDefShape,
+  type FrameSection,
+  frameSectionProps,
+  RegionSchema,
+  SectionSchema,
+  SolidLoadSchema,
+  SolidSupportSchema,
+  SupportFixSchema,
+  Vec3,
+} from './framebuild.ts';
+export {
   DIRECTIONS,
   holeTool,
   SCREW_SIZES,
@@ -117,6 +131,7 @@ export { compileScript, type ScriptOptions } from './script.ts';
 export { type SectionProps, sectionProperties } from './section.ts';
 export { as3D } from './shapes.ts';
 export {
+  defaultSolidElementSize,
   type SolidFeaInput,
   type SolidFeaResult,
   type SolidLoad,
