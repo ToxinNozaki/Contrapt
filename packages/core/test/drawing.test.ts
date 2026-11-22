@@ -105,3 +105,11 @@ test('layout: views and their dimension lines stay inside the border, never over
     assert.equal(overlap(l.top as never, l.right as never), false, 'top/right overlap');
   }
 });
+
+test('the sheet is accessible: it has a title and a description naming the sheet and the overall size', async () => {
+  const m = await build([{ op: 'box', id: 'p', w: 40, d: 20, h: 10 }]);
+  const r = drawingSheet(m, { title: 'Bracket <A>' });
+  assert.match(r.svg, /<title>Bracket &lt;A&gt;: third-angle drawing, scale /);
+  assert.match(r.svg, /<desc>.*Overall width 40, depth 20, height 10\./);
+  assert.match(r.svg, /role="img"/);
+});
