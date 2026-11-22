@@ -3,6 +3,7 @@
 import {
   analyzeFrame,
   buildFrameInput,
+  defaultModalElementSize,
   defaultSolidElementSize,
   type FrameDef,
   FrameDefShape,
@@ -15,6 +16,7 @@ import {
   SolidLoadSchema,
   SolidSupportSchema,
   solidFea,
+  solidModes,
   solveThermal,
   Vec3,
 } from '@contrapt/core';
@@ -33,6 +35,109 @@ const NOTE =
   'Linear-elastic rigid-jointed frame of beam elements (Euler-Bernoulli). Member stress = axial + bending only: no shear stress, no stress concentrations at joints, holes or welds, no buckling or fatigue. Mesh long members into several elements (nodes) wherever you need results between joints. An estimate for sizing, validated against textbook beam results; not a certification.';
 
 export const feaTools: ToolDef[] = [
+  {
+    name: 'solid_modes',
+    description:
+      'Natural frequencies (Hz) and mode shapes of a SOLID body on the fitted hexahedral mesh: how stiff and light the part is and what to keep motors, fans and drives away from. Give the supports (the fixed face or region, like solid_fea) and a library material; free-free bodies are not supported, fix something. Returns the lowest modes with where each moves most and in which direction, the mass check, and convergence. Frequencies converge fast with mesh size (a coarse default grid is typically within 1%): halve element_size_mm to confirm. Validated against Euler-Bernoulli cantilever frequencies (within 1%). Undamped, linear, small amplitude; attached masses (motors, payloads) are not modelled and lower the frequencies.',
+    input: {
+      body: z.string(),
+      material: z.enum(MATERIAL_NAMES).optional().describe('defaults to the body material'),
+      supports: z.array(SolidSupportSchema).min(1),
+      count: z.number().int().min(1).max(12).optional().describe('how many modes, default 4'),
+      element_size_mm: z
+        .number()
+        .positive()
+        .optional()
+        .describe('default: about 1500 elements, at least 3 across the thinnest direction'),
+    },
+    readOnly: true,
+    run: async (a, ctx) => {
+      const model = ctx.session.model;
+      if (!model) throw new Error('Nothing built yet');
+      const id = a.body as string;
+      const shape = model.bodies.get(id);
+      const info = model.report.bodies[id];
+      if (!shape || !info)
+        throw new Error(`No body "${id}". Bodies: ${[...model.bodies.keys()].join(', ')}`);
+      const matName = (a.material as string | undefined) ?? model.materials.get(id);
+      if (!matName) throw new Error(`${id} has no material: add a material step or pass material`);
+      const mat = getMaterial(matName);
+      if (!mat.youngsModulusGPa) throw new Error(`${matName} has no modulus in the library`);
+      const h =
+        (a.element_size_mm as number | undefined) ??
+        defaultModalElementSize(info.volume, info.bbox.size);
+      const t0 = Date.now();
+      const r = solidModes({
+        shape,
+        E: mat.youngsModulusGPa * 1000,
+        density: mat.density,
+        elementSize: h,
+        supports: a.supports as never,
+        count: a.count as number | undefined,
+      });
+      const modes = r.frequencies.map((f, i) => {
+        const v = r.modeShapes[i] as Float64Array;
+        let best = 0;
+        let at = 0;
+        for (let n = 0; n < r.nodes; n++) {
+          const mag = Math.hypot(
+            v[n * 3] as number,
+            v[n * 3 + 1] as number,
+            v[n * 3 + 2] as number,
+          );
+          if (mag > best) {
+            best = mag;
+            at = n;
+          }
+        }
+        const d = [v[at * 3] as number, v[at * 3 + 1] as number, v[at * 3 + 2] as number].map(
+          (x) => x / (best || 1),
+        );
+        const axis = ['X', 'Y', 'Z'][d.map(Math.abs).indexOf(Math.max(...d.map(Math.abs)))];
+        return {
+          mode: i + 1,
+          frequency_hz: round(f, 3),
+          moves_most_at_mm: roundAll(
+            [
+              r.nodeCoords[at * 3] as number,
+              r.nodeCoords[at * 3 + 1] as number,
+              r.nodeCoords[at * 3 + 2] as number,
+            ],
+            2,
+          ),
+          motion_direction: roundAll(d, 3),
+          mainly_along: axis,
+          residual: Number((r.residuals[i] as number).toExponential(1)),
+        };
+      });
+      return j({
+        verdict: `lowest natural frequency ${round(r.frequencies[0] as number, 2)} Hz (mainly along ${modes[0]?.mainly_along}); ${r.converged ? 'converged' : 'NOT fully converged'}`,
+        frequencies_hz: r.frequencies.map((f) => round(f, 3)),
+        modes,
+        mass_g: round(r.massG, 4),
+        material: {
+          name: matName,
+          youngs_modulus_gpa: mat.youngsModulusGPa,
+          density_g_cm3: mat.density,
+        },
+        mesh: {
+          element_size_mm: r.elementSizeMm,
+          elements: r.elements,
+          nodes: r.nodes,
+          fitted: r.fitted,
+        },
+        solver: {
+          converged: r.converged,
+          iterations: r.iterations,
+          seconds: round((Date.now() - t0) / 1000, 2),
+        },
+        ...(r.warnings.length ? { warnings: r.warnings } : {}),
+        notes: [
+          'Linear elastic free vibration of the part alone with the chosen supports: undamped, small amplitude, lumped mass. Attached masses and flexible mounts lower the frequencies. Keep forcing frequencies (motor speed, blade pass, drive harmonics) at least 30% away from any natural frequency. Estimate for sizing, not a certification.',
+        ],
+      });
+    },
+  },
   {
     name: 'thermal_analysis',
     description:

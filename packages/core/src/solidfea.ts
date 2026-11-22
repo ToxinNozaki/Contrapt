@@ -160,7 +160,7 @@ function invert9(A: Float64Array): Float64Array {
   return out;
 }
 
-function buildElement(hv: V3, E: number, nu: number): ElementModel {
+export function buildElement(hv: V3, E: number, nu: number): ElementModel {
   const lam = (E * nu) / ((1 + nu) * (1 - 2 * nu));
   const mu = E / (2 * (1 + nu));
   const D = new Float64Array(36);

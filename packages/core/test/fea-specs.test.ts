@@ -228,3 +228,29 @@ test('a thermal spec keeps a heated part under its limit: an aluminium heat spre
     /needs maxTemperatureC and\/or minTemperatureC/,
   );
 });
+
+test('a modal spec keeps the lowest natural frequency away from a forcing frequency', async () => {
+  const b = new ModelBuilder('arm');
+  b.add({ op: 'box', id: 'arm', w: 100, d: 10, h: 5, at: [50, 0, 0] });
+  b.add({ op: 'material', target: 'arm', name: '6061-T6' });
+  const m = await build(b);
+  const spec = (extra: object): Spec =>
+    ({
+      id: 'no-resonance',
+      kind: 'modal',
+      body: 'arm',
+      supports: [{ region: { face: { normal: '-X' } } }],
+      ...extra,
+    }) as Spec;
+  // beam theory: 411 Hz for this 100 x 10 x 5 mm aluminium cantilever
+  const ok = evaluateSpec(m, spec({ minFrequencyHz: 300 }));
+  assert.equal(ok.ok, true, ok.summary);
+  assert.equal(ok.fea, true);
+  assert.match(ok.summary, /lowest natural frequency 4[01]\d(\.\d+)? Hz/);
+  const bad = evaluateSpec(m, spec({ minFrequencyHz: 500 }));
+  assert.equal(bad.ok, false);
+  assert.match(bad.summary, /BELOW min 500/);
+  assert.equal(evaluateSpec(m, spec({ maxFrequencyHz: 300 })).ok, false);
+  assert.equal(evaluateSpecs(m, [spec({ minFrequencyHz: 300 })], { live: true }).pending, 1);
+  assert.match(evaluateSpec(m, spec({})).summary, /needs minFrequencyHz and\/or maxFrequencyHz/);
+});

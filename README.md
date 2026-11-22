@@ -48,7 +48,7 @@ claude mcp add contrapt -- node /path/to/Contrapt/packages/mcp/src/cli.ts
 Then try: *"Use the `proof_loop` playbook: a 100 mm aluminium cantilever arm, 20 mm wide, must carry 50 N at the tip with a
 safety factor of 2 and less than 2 mm droop. Find the lightest thickness that passes, then make the Build Pack."*
 
-## What it can do (46 tools)
+## What it can do (47 tools)
 
 | Area | Tools |
 |---|---|
@@ -57,7 +57,7 @@ safety factor of 2 and less than 2 mm droop. Find the lightest thickness that pa
 | **Materials** | 18 materials (with typical thermal properties), `material` step, mass in every report, `mass_properties` (centre of mass, inertia tensor, inertia about any axis) |
 | **Assemblies** | `check_interference`, `check_assembly`, `bom`, `motion_check` |
 | **Hand calculations** | `section_properties`, `beam_check`, `column_check` |
-| **Simulation** | `frame_analysis`, `frame_modes`, `frame_buckling` (3D beam FEA); `solid_fea` (body-fitted solid FEA), `thermal_analysis` (steady-state conduction and convection with thermal stress); `mechanism_sweep`, `fourbar_check` (linkage kinematics); `dynamics_sim` (1-DOF dynamics) |
+| **Simulation** | `frame_analysis`, `frame_modes`, `frame_buckling` (3D beam FEA); `solid_fea` (body-fitted solid FEA), `solid_modes` (natural frequencies of solids), `thermal_analysis` (steady-state conduction and convection with thermal stress); `mechanism_sweep`, `fourbar_check` (linkage kinematics); `dynamics_sim` (1-DOF dynamics) |
 | **Manufacturing** | `print_check` (FDM overhangs, orientation, thin walls), `drawing` (SVG sheet with three views, dimensions, title block), `export_model` (STEP, STL) |
 | **Proof Loop** | `add_spec`, `remove_spec`, `check_specs`, `optimize_param`, `journal_add`, `get_journal`, `build_pack` |
 | **Other CAD** | `inspect_file`, `import_file` (STEP), `convert_file` (optional converter; Inventor parts verified) |
@@ -81,6 +81,7 @@ number it is (measured, FEA, hand estimate).
 | Frame modes / buckling | Euler-Bernoulli frequencies (0.5%); Euler column loads for four end conditions (0.5%) |
 | Solid FEA | slender cantilever and axial bar vs beam and bar theory (within 0.5%); the frame solver; plate with a hole vs the handbook stress-concentration factor (within 1.5% at 5 elements per radius, 4% at 2.5) |
 | Mechanisms | slider-crank position at every pose; four-bar sweep vs closed-form rocker swing and transmission angle |
+| Solid modes | cantilever bending frequencies vs Euler-Bernoulli (within 1%), round and rectangular sections |
 | Thermal | slab, internal generation, convecting fin and curved tube wall against closed forms; thermal stress against sigma = E alpha dT (161.0000 MPa vs 161) |
 | Dynamics | pendulum periods (including the 90-degree elliptic case), DC-motor spin-up, damped spring-mass, Coulomb friction stop |
 | Mass properties | box, cylinder, sphere, drilled plate closed forms |

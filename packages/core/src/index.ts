@@ -141,6 +141,12 @@ export {
   solidFea,
 } from './solidfea.ts';
 export {
+  defaultModalElementSize,
+  type SolidModalInput,
+  type SolidModalResult,
+  solidModes,
+} from './solidmodal.ts';
+export {
   evaluateSpec,
   evaluateSpecs,
   type JournalEntry,

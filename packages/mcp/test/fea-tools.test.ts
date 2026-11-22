@@ -518,3 +518,45 @@ test('thermal_analysis fails clearly: no material, no conductivity, no driver, b
   assert.ok(ok.temperature_c.max <= 50 + 1e-9);
   assert.ok(ok.temperature_c.min >= 20 - 1e-9);
 });
+
+test('solid_modes: an aluminium cantilever through the tool reports beam-theory frequencies and where each mode moves', async () => {
+  await call('new_model', { name: 'modes' });
+  await call('add_step', { step: { op: 'box', id: 'arm', w: 100, d: 10, h: 5, at: [50, 0, 0] } });
+  await call('add_step', { step: { op: 'material', target: 'arm', name: '6061-T6' } });
+  const r = json(
+    await call('solid_modes', {
+      body: 'arm',
+      supports: [{ region: { face: { normal: '-X' } } }],
+      count: 3,
+    }),
+  );
+  const I = (10 * 5 ** 3) / 12;
+  const f1 = (1.8751 ** 2 / (2 * Math.PI)) * Math.sqrt((69000 * I) / (2.7e-9 * 50 * 100 ** 4));
+  assert.ok(Math.abs(r.frequencies_hz[0] - f1) < 0.015 * f1, `${r.frequencies_hz[0]} vs ${f1}`);
+  assert.equal(r.modes[0].mainly_along, 'Z');
+  assert.ok(r.modes[0].moves_most_at_mm[0] > 99, 'the free end moves most');
+  assert.equal(r.solver.converged, true);
+  assert.ok(Math.abs(r.mass_g - 13.5) < 1e-6);
+  assert.match(r.verdict, /lowest natural frequency 4[01]\d(\.\d+)? Hz \(mainly along Z\)/);
+  assert.match(r.notes[0], /at least 30% away/);
+  assert.match(
+    text(
+      await call('solid_modes', {
+        body: 'zz',
+        material: 'PLA',
+        supports: [{ region: { face: { normal: '-X' } } }],
+      }),
+    ),
+    /No body "zz"/,
+  );
+  assert.match(
+    text(
+      await call('solid_modes', {
+        body: 'arm',
+        material: 'TPU',
+        supports: [{ region: { face: { normal: '-X' } } }],
+      }),
+    ),
+    /no modulus/,
+  );
+});

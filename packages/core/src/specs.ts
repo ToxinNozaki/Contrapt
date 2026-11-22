@@ -16,6 +16,7 @@ import { checkInterference } from './interference.ts';
 import { getMaterial, MATERIAL_NAMES } from './materials.ts';
 import { sectionProperties } from './section.ts';
 import { defaultSolidElementSize, solidFea } from './solidfea.ts';
+import { defaultModalElementSize, solidModes } from './solidmodal.ts';
 import { solveThermal } from './thermal.ts';
 
 const Id = z
@@ -109,6 +110,20 @@ export const SpecSchema = z.discriminatedUnion('kind', [
   }),
   z.object({
     ...common,
+    kind: z.literal('modal'),
+    body: z.string().describe('a body with a material'),
+    supports: z.array(SolidSupportSchema).min(1),
+    minFrequencyHz: z
+      .number()
+      .optional()
+      .describe(
+        'the lowest natural frequency must be at least this (keep it away from motor speeds)',
+      ),
+    maxFrequencyHz: z.number().optional(),
+    elementSizeMm: z.number().positive().optional().describe('default: about 1500 elements'),
+  }),
+  z.object({
+    ...common,
     kind: z.literal('thermal'),
     body: z.string().describe('a body with a material that has a thermal conductivity'),
     fixedTemperatures: z
@@ -151,7 +166,7 @@ export interface SpecResult {
 }
 
 /** Spec kinds that run a finite-element analysis: seconds, not milliseconds. */
-export const HEAVY_KINDS: readonly Spec['kind'][] = ['frame', 'solid_fea', 'thermal'];
+export const HEAVY_KINDS: readonly Spec['kind'][] = ['frame', 'solid_fea', 'thermal', 'modal'];
 export interface EvaluateOptions {
   /** skip heavy analyses and report them as pending (used for the live verdict after every change) */
   live?: boolean;
@@ -269,6 +284,47 @@ export function evaluateSpec(model: Model, spec: Spec, opts: EvaluateOptions = {
           );
         const j = limits.length ? judge(limits) : { ok: true, summary: 'no checks apply' };
         return { ...base, ...j, summary: j.summary + note, fea: true };
+      }
+      case 'modal': {
+        const shape = model.bodies.get(spec.body);
+        const info = model.report.bodies[spec.body];
+        if (!shape || !info) body(model, spec.body);
+        const matName = model.materials.get(spec.body);
+        if (!matName) throw new Error(`${spec.body} has no material: add a material step`);
+        const mat = getMaterial(matName);
+        if (!mat.youngsModulusGPa) throw new Error(`${matName} has no modulus in the library`);
+        if (spec.minFrequencyHz === undefined && spec.maxFrequencyHz === undefined)
+          throw new Error('a modal spec needs minFrequencyHz and/or maxFrequencyHz');
+        const md = solidModes({
+          shape: shape as NonNullable<typeof shape>,
+          E: mat.youngsModulusGPa * 1000,
+          density: mat.density,
+          elementSize:
+            spec.elementSizeMm ??
+            defaultModalElementSize(
+              (info as NonNullable<typeof info>).volume,
+              (info as NonNullable<typeof info>).bbox.size,
+            ),
+          supports: spec.supports as never,
+          count: 1,
+        });
+        const j = judge([
+          {
+            label: 'lowest natural frequency',
+            actual: md.frequencies[0] as number,
+            min: spec.minFrequencyHz,
+            max: spec.maxFrequencyHz,
+            unit: 'Hz',
+          },
+        ]);
+        const warn = md.converged ? '' : '; WARNING: the eigensolver did not fully converge';
+        return {
+          ...base,
+          ...j,
+          summary: `${j.summary} [${md.elements} elements${warn}]`,
+          ok: j.ok && md.converged,
+          fea: true,
+        };
       }
       case 'thermal': {
         const shape = model.bodies.get(spec.body);
