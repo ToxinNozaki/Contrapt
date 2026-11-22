@@ -50,6 +50,10 @@ inspect_file, import_file, convert_file, render_view, list_knowledge, get_knowle
 (1) npm publish of `contrapt` (needs their npm account). (2) Checks inside real Claude Desktop and LM Studio (Claude Code is verified: `claude mcp list` shows Connected). (3) ChatGPT over HTTP is untried and may need OAuth rather than a bearer token.
 (4) Yes/no on the two BIG BETS in ROADMAP "Ideas Review #1" (analysis tools; start the Proof Loop). Their Claude Code registration currently has no `--cadmpeg` flag (their choice to enable the converter).
 
+## 6b. UPDATE 2026-11-22: everything below section 7 has since been built
+After batch 2 the owner said "do everything": shipped (all pushed, CI green, ~206 core + 82 mcp tests): material/mass, check_interference, face-relative hole/sketch, section_properties + beam_check + column_check, the Proof Loop (specs, check_specs, optimize_param, Design Journal, build_pack, proof_loop playbook), assemblies (mate step, check_assembly, bom, motion_check), drawing (SVG sheets), print_check, frame FEA (frame_analysis, frame_modes), voxel solid FEA (solid_fea), mechanisms (mechanism_sweep, fourbar_check), mass_properties, dynamics_sim. See docs/EDITLOG.md (bottom) for what was learned in each.
+STILL OPEN: body-fitted tetrahedral FEA, linear buckling, thermal, multi-body dynamics and contacts, joints/grounding/kinematics in 3D assemblies, sheet metal, section/detail drawing views with feature dimensions and DXF/PDF, viewer upgrades (section plane, colours, labels, click-to-highlight), more importers, README/screenshots/release polish, and the owner-only items (npm publish, Claude Desktop and LM Studio checks, ChatGPT over HTTP, optional --cadmpeg).
+
 ## 7. SECOND BATCH: DONE 2026-11-17 (B2.1 materials/mass, B2.2 check_interference, B2.3 face-relative hole + sketch). Kept below for reference.
 **NEXT: report to the owner and get a yes/no on the two big bets in section 8 (analysis tools; the Proof Loop), then M6 assemblies.**
 Original spec:

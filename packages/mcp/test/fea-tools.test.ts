@@ -268,3 +268,97 @@ test('solid_fea: a 120 x 6 x 6 aluminium cantilever through the tool matches bea
     /no modulus/,
   );
 });
+
+test('mechanism tools: a slider-crank stroke and a four-bar verdict through the MCP surface', async () => {
+  const sc = json(
+    await call('mechanism_sweep', {
+      points: { O: [0, 0], A: [30, 0], B: [130, 0] },
+      grounds: ['O'],
+      links: [{ a: 'A', b: 'B' }],
+      sliders: [{ point: 'B', axis: 'y' }],
+      crank: { pivot: 'O', tip: 'A', from_deg: 0, to_deg: 360 },
+      track: ['B'],
+      steps: 36,
+    }),
+  );
+  assert.match(sc.verdict, /assembles through the whole range \(37 poses\)/);
+  assert.ok(Math.abs(sc.extents_mm.B.maxX - sc.extents_mm.B.minX - 60) < 0.01);
+  assert.ok(sc.poses.length <= 37);
+  const fb = json(await call('fourbar_check', { ground: 50, crank: 20, coupler: 55, rocker: 40 }));
+  assert.equal(fb.type, 'crank-rocker');
+  assert.equal(fb.crank_turns_fully, true);
+  assert.ok(fb.transmission_angle_deg.min > 25 && fb.transmission_angle_deg.max < 155);
+  assert.match(fb.quality, /transmission|force transfer|marginal|jam/i);
+  const lock = json(
+    await call('mechanism_sweep', {
+      points: { O2: [0, 0], O4: [50, 0], B: [0, 40], C: [18.9, 50.4] },
+      grounds: ['O2', 'O4'],
+      links: [
+        { a: 'B', b: 'C' },
+        { a: 'C', b: 'O4' },
+      ],
+      crank: { pivot: 'O2', tip: 'B', from_deg: 90, to_deg: 450 },
+    }),
+  );
+  assert.ok(typeof lock.verdict === 'string');
+  assert.match(
+    text(
+      await call('mechanism_sweep', {
+        points: { O: [0, 0] },
+        grounds: ['O'],
+        links: [{ a: 'O', b: 'Q' }],
+        crank: { pivot: 'O', tip: 'O', from_deg: 0, to_deg: 1 },
+      }),
+    ),
+    /unknown pin "Q"/,
+  );
+});
+
+test('CAD inertia drives a physical pendulum: mass_properties of a bar feeds dynamics_sim and matches 2 pi sqrt(J / (m g d))', async () => {
+  await call('new_model', { name: 'pendulum' });
+  await call('add_step', { step: { op: 'box', id: 'bar', w: 200, d: 10, h: 4, at: [100, 0, 0] } });
+  await call('add_step', { step: { op: 'material', target: 'bar', name: 'mild-steel' } });
+  const mp = json(
+    await call('mass_properties', {
+      body: 'bar',
+      axis: { origin: [0, 0, 0], direction: [0, 1, 0] },
+    }),
+  );
+  const m = (200 * 10 * 4 * 7.85) / 1e6; // kg
+  assert.ok(Math.abs(mp.mass_g - m * 1000) < 1e-3);
+  const J = (m * (0.2 ** 2 + 0.004 ** 2)) / 12 + m * 0.1 ** 2; // about the pivot at one end
+  assert.ok(
+    Math.abs(mp.inertia_about_axis_kgm2 - J) < 1e-4 * J,
+    `${mp.inertia_about_axis_kgm2} vs ${J}`,
+  );
+  const sim = json(
+    await call('dynamics_sim', {
+      kind: 'rotary',
+      inertia: mp.inertia_about_axis_kgm2,
+      gravity: { mass: m, arm_m: 0.1 },
+      q0: 0.05,
+      duration_s: 8,
+    }),
+  );
+  const expected = 2 * Math.PI * Math.sqrt(J / (m * 9.80665 * 0.1));
+  assert.ok(
+    Math.abs(sim.oscillation_period_s - expected) < 3e-3 * expected,
+    `${sim.oscillation_period_s} vs ${expected}`,
+  );
+  assert.ok(sim.energy_drift_relative < 1e-6);
+  assert.ok(sim.series.length <= 60);
+  assert.match(text(await call('mass_properties', { body: 'nope' })), /No body "nope"/);
+  await call('add_step', { step: { op: 'box', id: 'raw', w: 5, d: 5, h: 5, at: [50, 0, 0] } });
+  assert.match(text(await call('mass_properties', { body: 'raw' })), /no material/);
+  assert.match(
+    text(
+      await call('dynamics_sim', {
+        kind: 'rotary',
+        inertia: 1,
+        duration_s: 1,
+        limits: { min: 2, max: 1 },
+      }),
+    ),
+    /below limits.max/,
+  );
+});

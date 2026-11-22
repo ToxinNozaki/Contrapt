@@ -52,7 +52,7 @@ Status: `[ ]` planned · `[~]` in progress · `[x]` done · `[-]` dropped (say w
 
 ## P2 — Query and verify (the AI's eyes)
 
-- [~] Mass properties — volume, area, centre of mass done (2026-11-15); mass from material done (2026-11-17); inertia tensor pending
+- [x] Mass properties: volume, area, centre of mass, mass from material, full inertia tensor, principal moments and inertia about any axis (mass_properties; exact for flat bodies, ~0.5% for curved) - 2026-11-22
 - [~] Bounding box done (2026-11-15); distance between entities and angle between faces pending
 - [ ] Section views and cut-plane renders
 - [x] Interference / clearance check between bodies (check_interference) - 2026-11-17
@@ -89,8 +89,8 @@ Status: `[ ]` planned · `[~]` in progress · `[x]` done · `[-]` dropped (say w
 - [ ] Modal mode shapes, and modal analysis of solids (frame natural frequencies done)
 - [ ] Linear buckling
 - [ ] Thermal (steady-state, then transient) — stretch
-- [ ] Rigid-body dynamics: motors, springs, dampers, gravity, friction, contacts
-- [ ] Motion studies and kinematic sweeps, with plots and playback
+- [~] Dynamics: 1-DOF rotary/linear RK4 in SI (dynamics_sim: inertia, damping, spring, pendulum gravity, Coulomb friction, DC-motor line, stops), validated vs pendulum (incl. 90 degree elliptic), spring-mass-damper, motor spin-up, friction stop - 2026-11-22. Multi-body dynamics, contacts and coupled DOFs pending
+- [~] Kinematic sweeps: planar linkages via the constraint solver (mechanism_sweep: lock detection, pin paths, joint angles, branch-flip warning) and closed-form four-bar Grashof/transmission analysis (fourbar_check), validated vs slider-crank - 2026-11-22. 3D motion studies, plots and playback pending
 - [~] Validation suite: cantilever, beam modes, torsion, gravity run in CI (core/test/fea.test.ts); pendulum and four-bar pending
 - [x] Every FEA result reports its assumptions and limits (notes in each reply) - 2026-11-19
 - [x] Every result reports assumptions and limits (frame_analysis, solid_fea, beam_check, print_check all carry notes) - 2026-11-19

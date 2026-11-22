@@ -21,6 +21,7 @@ export {
 } from './beam.ts';
 export { ModelBuilder, STEP_OPS } from './builder.ts';
 export { drawingSheet, type SheetOptions, type SheetResult } from './drawing.ts';
+export { type DynamicsInput, type DynamicsResult, simulateDynamics } from './dynamics.ts';
 export type { BuildOptions, FileProvider } from './engine.ts';
 export {
   type BuildReport,
@@ -77,8 +78,23 @@ export {
 } from './inventor.ts';
 export { makeInventorLikeFixture, propertySet, TINY_PNG } from './inventor-fixture.ts';
 export { initKernel, kernelDiagnostics } from './kernel.ts';
+export {
+  inertiaAboutAxis,
+  type MassProps,
+  type MassPropsDensity,
+  massProps,
+  withDensity,
+} from './massprops.ts';
 export { getMaterial, MATERIAL_NAMES, MATERIALS, type Material, massGrams } from './materials.ts';
 export { type BodyInfo, describeBody } from './measure.ts';
+export {
+  type FourBarResult,
+  fourBarCheck,
+  type MechanismInput,
+  type MechanismPose,
+  type MechanismResult,
+  sweepMechanism,
+} from './mechanism.ts';
 export { type OptimizeInput, type OptimizeResult, optimizeParam, type Trial } from './optimize.ts';
 export { mirrorPlane, patternCopies, patternPositions } from './pattern.ts';
 export {
