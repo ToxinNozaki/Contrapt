@@ -161,7 +161,7 @@ Status: `[ ]` planned · `[~]` in progress · `[x]` done · `[-]` dropped (say w
 - [ ] Approximate geometry layer (mesh/implicit; e.g. manifold-3d) clearly tagged "approximate"
 - [ ] Primitive and free-form shape library (spheres, capsules, lathe, noise/organic, text)
 - [ ] Mesh import (STL/OBJ/glTF) and CAD import into scenes
-- [ ] Materials/colours, labels, dimension callouts, saved camera views
+- [~] Materials/colours and labels in the viewer done 2026-11-22; dimension callouts and saved camera views pending
 - [ ] Reference objects for scale (human figure, table, door, room)
 - [ ] Keyframe animation and simulation playback; GIF/PNG/MP4 snapshot export
 - [ ] Scene presets (workshop, studio, outdoors)
@@ -170,7 +170,7 @@ Status: `[ ]` planned · `[~]` in progress · `[x]` done · `[-]` dropped (say w
 - [x] Streamable HTTP MCP transport — built 2026-11-17 (verify with ChatGPT and OAuth-style auth if required)
 - [x] Publishable build (2026-11-17): `packages/contrapt` bundles the CLI with esbuild (153 KB; heavy deps stay external), ships the knowledge packs and viewer, `npm run smoke:pack` packs it, installs the tarball into a clean folder and drives it as a real MCP client (21 tools, OpenCASCADE + solver WASM, STEP export, render, knowledge, viewer incl. three.js); runs in CI. NOT yet published to npm (needs the owner's npm account)
 - [ ] Per-op convenience tools (add_box, add_fillet, ...) if weaker/local models struggle with the generic add_step — added 2026-11-15
-- [ ] Viewer: click a body to highlight its step, hover to read dimensions, section plane, themes toggle — added 2026-11-15
+- [x] Viewer: click a body to select it (glow + info card with material, mass, size), section plane (X/Y/Z with slider, cut face filled toward the camera), colour by material, body labels, light/dark/auto theme switch (remembered), Requirements panel with live Proof Loop PASS/FAIL and reasons, Design Journal, material and mass in the Measured table - 2026-11-22. Hover dimensions and step-click highlighting pending
 - [ ] Live human edits in the viewer (change a parameter by dragging/typing) feeding back to the timeline — added 2026-11-15
 
 ## P12 — Engineering knowledge and advanced prompts (added 2026-11-15)

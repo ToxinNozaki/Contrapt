@@ -37,6 +37,7 @@ export const proofTools: ToolDef[] = [
     input: { spec: SpecSchema },
     run: async (a, ctx) => {
       const id = ctx.session.builder.addSpec(a.spec);
+      ctx.session.touch();
       return feedback(ctx, `Spec "${id}" saved. Call check_specs for the verdict.`);
     },
   },
@@ -46,6 +47,7 @@ export const proofTools: ToolDef[] = [
     input: { id: z.string() },
     run: async (a, ctx) => {
       ctx.session.builder.removeSpec(a.id as string);
+      ctx.session.touch();
       return feedback(ctx, `Spec "${a.id}" removed.`);
     },
   },
@@ -87,6 +89,7 @@ export const proofTools: ToolDef[] = [
     },
     run: async (a, ctx) => {
       const e = ctx.session.builder.addJournal(a.kind as 'note', a.text as string);
+      ctx.session.touch();
       return j({ added: e, entries: ctx.session.builder.journal.length });
     },
   },

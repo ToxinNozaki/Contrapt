@@ -172,3 +172,9 @@ so nothing is lost even if a bullet here is missed. Repo-relative paths only (th
 ## 2026-11-22 — Frame buckling
 
 - `frameBuckling` in fea.ts: static solve for member axial forces, consistent geometric stiffness (both bending planes plus a torsional term), generalized eigenproblem K phi = lambda (-Kg) phi reduced with a Cholesky factor of K and solved by Jacobi (smallest positive lambda = largest positive 1/lambda). The load factor multiplies all applied loads and gravity. Validated against Euler for the four classic end conditions (0.5%, 8 elements), the 1/L^2 scaling, weak-axis selection, and tension-only structures. MCP tool `frame_buckling` with a margin-of-3 verdict. Solid and plate buckling are not done.
+
+## 2026-11-22 — Viewer upgrades
+
+- Server: the snapshot now carries the Proof Loop verdict (cached per version + spec set) and `Session.touch()` notifies the viewer when specs or journal entries change without a rebuild; add_spec, remove_spec and journal_add call it.
+- Client: click-to-select with emissive highlight, info card and rail sync (Escape clears); section plane per axis with a slider (clipping planes; inner faces painted flat so the cut reads as solid; the plane removes the camera-side part so the cut faces you, re-picked when an orbit ends); colour by material (library colours); body labels; light/dark/auto theme with a data-theme override (localStorage guarded); Requirements and Design journal sections; Material and Mass rows.
+- Verified in the real browser pane (screenshots of material colours, labels, selection card with PETG 3.43 g = 2700 mm3 x 1.27, section with filled cut, light theme and the FAIL list). Gotcha found while testing: screenshots of an on-demand WebGL canvas are blank right after a state change; wait a second and retake. Not a viewer bug.

@@ -15,6 +15,7 @@
     <canvas id="gl" tabindex="0" aria-label="3D viewport. Drag to orbit, scroll to zoom, right-drag to pan."></canvas>
     <div id="dims" aria-hidden="true"></div>
     <p id="empty" hidden>No bodies yet. Ask your AI to add a box or run a script.</p>
+    <div id="pick" hidden role="status" aria-live="polite"></div>
   </main>
 
   <aside id="rail" aria-label="Build report">
@@ -30,9 +31,17 @@
       <h2 id="params-h">Parameters</h2>
       <dl id="params"></dl>
     </section>
+    <section aria-labelledby="specs-h" id="specs-section" hidden>
+      <h2 id="specs-h">Requirements <span id="specs-count" class="count"></span></h2>
+      <ul id="specs"></ul>
+    </section>
     <section aria-labelledby="bodies-h" id="bodies-section" hidden>
       <h2 id="bodies-h">Measured</h2>
       <div id="bodies"></div>
+    </section>
+    <section aria-labelledby="journal-h" id="journal-section" hidden>
+      <h2 id="journal-h">Design journal</h2>
+      <ul id="journal"></ul>
     </section>
   </aside>
 
@@ -42,6 +51,11 @@
     <button id="t-edges" type="button" aria-pressed="true">Edges</button>
     <button id="t-dims" type="button" aria-pressed="true">Sizes</button>
     <button id="t-wire" type="button" aria-pressed="false">Wireframe</button>
+    <button id="t-colour" type="button" aria-pressed="false" title="Colour parts by their material">Material colours</button>
+    <button id="t-labels" type="button" aria-pressed="false" title="Show part names in the view">Labels</button>
+    <button id="t-section" type="button" aria-pressed="false" title="Cut the model open along X, then Y, then Z, then off">Section: off</button>
+    <input id="section-pos" type="range" min="0" max="1" step="0.005" value="0.5" hidden aria-label="Section plane position">
+    <button id="t-theme" type="button" title="Switch between automatic, light and dark">Theme: auto</button>
   </nav>
 
   <script type="module" src="/main.js"></script>

@@ -6,6 +6,7 @@ import { join } from 'node:path';
 import {
   type BuildReport,
   buildModel,
+  evaluateSpecs,
   isSafeFileName,
   type Model,
   ModelBuilder,
@@ -19,6 +20,19 @@ export interface Snapshot {
   report: BuildReport;
   meshes: ViewerMesh[];
   timeline: ReturnType<ModelBuilder['toJSON']>;
+  /** Proof Loop verdict for the viewer (undefined when the model has no specs) */
+  specs?: {
+    total: number;
+    passing: number;
+    results: {
+      id: string;
+      kind: string;
+      ok: boolean;
+      summary: string;
+      description?: string;
+      estimate?: boolean;
+    }[];
+  };
 }
 
 export interface SessionOptions {
@@ -87,6 +101,35 @@ export class Session {
     return run;
   }
 
+  /** Tell listeners (the viewer) that something other than geometry changed, e.g. a spec or a journal entry. */
+  touch(): void {
+    this.version++;
+    for (const l of this.listeners) l();
+  }
+
+  private specCache?: { key: string; value: NonNullable<Snapshot['specs']> };
+  private specSummary(): Snapshot['specs'] {
+    const specs = this.builder.specs;
+    if (specs.length === 0 || !this.model) return undefined;
+    const key = `${this.version}|${JSON.stringify(specs)}`;
+    if (this.specCache?.key === key) return this.specCache.value;
+    const rep = evaluateSpecs(this.model, specs);
+    const value = {
+      total: rep.total,
+      passing: rep.passing,
+      results: rep.results.map((r) => ({
+        id: r.id,
+        kind: r.kind,
+        ok: r.ok,
+        summary: r.summary,
+        ...(r.description ? { description: r.description } : {}),
+        ...(r.estimate ? { estimate: true } : {}),
+      })),
+    };
+    this.specCache = { key, value };
+    return value;
+  }
+
   snapshot(): Snapshot {
     const tl = this.builder.toJSON();
     return {
@@ -95,6 +138,7 @@ export class Session {
       report: this.model?.report ?? { ok: true, params: {}, steps: [], bodies: {} },
       meshes: this.meshes,
       timeline: tl,
+      specs: this.specSummary(),
     };
   }
 }

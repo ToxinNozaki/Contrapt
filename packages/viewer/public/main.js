@@ -8,12 +8,47 @@ const css = (name) => getComputedStyle(document.documentElement).getPropertyValu
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 const BODY_COLORS = ['#8ea3b8', '#cf8d5e', '#7fae95', '#b79fcc', '#d6b85f', '#6fa6c9'];
-const view = { edges: true, dims: true, wire: false };
+// Typical colours of the library materials, so a glance at the view tells metal from plastic from wood.
+const MATERIAL_COLORS = {
+  '6061-T6': '#b9c2cc',
+  '7075-T6': '#a9b3c0',
+  'mild-steel': '#7d8794',
+  'stainless-304': '#c9ced4',
+  'alloy-steel-4140': '#6f7986',
+  brass: '#d4b04c',
+  copper: '#c97a4a',
+  'titanium-6al4v': '#9aa0aa',
+  PLA: '#d96c5b',
+  PETG: '#58a6c9',
+  ABS: '#e2c44a',
+  nylon: '#e8e3d3',
+  polycarbonate: '#b9d6e3',
+  TPU: '#6fbf73',
+  acrylic: '#a7d3e8',
+  acetal: '#efefe9',
+  'birch-plywood': '#d3b17d',
+  hardwood: '#a8774a',
+};
+const view = {
+  edges: true,
+  dims: true,
+  wire: false,
+  material: false,
+  labels: false,
+  section: 'off', // off | x | y | z
+  sectionPos: 0.5,
+};
+let selected = null;
+const colourOf = (id, i) =>
+  (view.material && MATERIAL_COLORS[snap?.report.bodies[id]?.material]) ||
+  BODY_COLORS[i % BODY_COLORS.length];
 
 // ---------- three.js scene ----------
 const canvas = $('gl');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.localClippingEnabled = true;
+const clipPlane = new THREE.Plane(new THREE.Vector3(0, 0, -1), 0);
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(35, 1, 0.1, 100000);
 camera.up.set(0, 0, 1); // CAD convention: Z is up
@@ -22,6 +57,13 @@ const controls = new OrbitControls(camera, canvas);
 controls.enableDamping = !reduceMotion;
 controls.dampingFactor = 0.12;
 controls.addEventListener('change', invalidate);
+// when an orbit ends, let the section plane re-pick which side to cut away
+controls.addEventListener('end', () => {
+  if (view.section !== 'off') {
+    updateSection();
+    invalidate();
+  }
+});
 
 scene.add(new THREE.HemisphereLight(0xffffff, 0x8a96a6, 1.15));
 const key = new THREE.DirectionalLight(0xffffff, 1.6);
@@ -96,13 +138,19 @@ function buildScene() {
   if (!snap) return;
 
   const ink = new THREE.Color(css('--ink'));
+  const sectioning = view.section !== 'off';
+  const clip = sectioning ? [clipPlane] : [];
+  if (sectioning) updateSection();
   snap.meshes.forEach((m, i) => {
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.Float32BufferAttribute(m.vertices, 3));
     g.setAttribute('normal', new THREE.Float32BufferAttribute(m.normals, 3));
     g.setIndex(m.triangles);
     const mat = new THREE.MeshStandardMaterial({
-      color: BODY_COLORS[i % BODY_COLORS.length],
+      clippingPlanes: clip,
+      emissive: new THREE.Color(m.id === selected ? css('--accent') : '#000000'),
+      emissiveIntensity: m.id === selected ? 0.45 : 0,
+      color: colourOf(m.id, i),
       roughness: 0.55,
       metalness: 0.12,
       wireframe: view.wire,
@@ -113,14 +161,47 @@ function buildScene() {
     const mesh = new THREE.Mesh(g, mat);
     mesh.name = m.id;
     modelGroup.add(mesh);
+    if (sectioning && !view.wire) {
+      // the inside faces show through the cut: paint them flat so the section reads as solid material
+      const inner = new THREE.Mesh(
+        g,
+        new THREE.MeshBasicMaterial({
+          color: new THREE.Color(css('--accent')),
+          side: THREE.BackSide,
+          clippingPlanes: clip,
+        }),
+      );
+      modelGroup.add(inner);
+    }
     if (view.edges && !view.wire) {
       const e = new THREE.LineSegments(
         new THREE.EdgesGeometry(g, 28),
-        new THREE.LineBasicMaterial({ color: ink, transparent: true, opacity: 0.55 }),
+        new THREE.LineBasicMaterial({
+          color: ink,
+          transparent: true,
+          opacity: 0.55,
+          clippingPlanes: clip,
+        }),
       );
       modelGroup.add(e);
     }
   });
+
+  if (view.labels)
+    for (const [id, info] of Object.entries(snap.report.bodies)) {
+      const el = document.createElement('div');
+      el.className = 'tag';
+      el.textContent = id;
+      $('dims').appendChild(el);
+      dimLabels.push({
+        el,
+        p: new THREE.Vector3(
+          (info.bbox.min[0] + info.bbox.max[0]) / 2,
+          (info.bbox.min[1] + info.bbox.max[1]) / 2,
+          info.bbox.max[2],
+        ),
+      });
+    }
 
   const box = unionBox(snap.report.bodies);
   const has = !box.isEmpty();
@@ -162,9 +243,9 @@ function buildDims(box, diag) {
     dimGroup.add(new THREE.Line(g, mat));
   };
   const v = (x, y, z) => new THREE.Vector3(x, y, z);
-  const label = (p, text) => {
+  const label = (p, text, cls = 'dim') => {
     const el = document.createElement('div');
-    el.className = 'dim';
+    el.className = cls;
     el.textContent = text;
     $('dims').appendChild(el);
     dimLabels.push({ el, p });
@@ -339,6 +420,7 @@ function renderRail() {
     dl.append(dt, dd);
   }
 
+  renderSpecs();
   const bodies = snap?.report.bodies ?? {};
   const bNames = Object.keys(bodies);
   $('bodies-section').hidden = bNames.length === 0;
@@ -352,12 +434,14 @@ function renderRail() {
     head.className = 'bn';
     const sw = document.createElement('span');
     sw.className = 'swatch';
-    sw.style.background = BODY_COLORS[i % BODY_COLORS.length];
+    sw.style.background = colourOf(id, i);
     const nm = document.createElement('span');
     nm.textContent = id;
     head.append(sw, nm);
     const t = document.createElement('table');
     const rows = [
+      ...(b.material ? [['Material', b.material]] : []),
+      ...(b.massG !== undefined ? [['Mass', `${num(b.massG)} g`]] : []),
       ['Volume', `${num(b.volume)} mm³`],
       ['Surface', `${num(b.area)} mm²`],
       ['Size', `${b.bbox.size.map(num).join(' × ')} mm`],
@@ -374,6 +458,9 @@ function renderRail() {
       t.appendChild(tr);
     }
     div.append(head, t);
+    div.dataset.id = id;
+    if (id === selected) div.classList.add('sel');
+    div.addEventListener('click', () => setSelected(selected === id ? null : id));
     wrap.appendChild(div);
   });
 }
@@ -410,6 +497,137 @@ function connect() {
   };
 }
 
+// ---------- requirements, journal, selection, section ----------
+function renderSpecs() {
+  const specs = snap?.specs;
+  $('specs-section').hidden = !specs;
+  const ul = $('specs');
+  ul.replaceChildren();
+  if (specs) {
+    $('specs-count').textContent = `${specs.passing} of ${specs.total} pass`;
+    for (const r of specs.results) {
+      const li = document.createElement('li');
+      li.className = r.ok ? 'pass' : 'fail';
+      const state = document.createElement('span');
+      state.className = 'state';
+      state.textContent = r.ok ? 'PASS' : 'FAIL';
+      const id = document.createElement('span');
+      id.className = 'sid';
+      id.textContent = r.id;
+      li.append(state, id);
+      if (r.estimate) {
+        const e = document.createElement('span');
+        e.className = 'est';
+        e.textContent = 'hand estimate';
+        li.appendChild(e);
+      }
+      if (r.description) {
+        const w = document.createElement('span');
+        w.className = 'why';
+        w.textContent = r.description;
+        li.appendChild(w);
+      }
+      const d = document.createElement('span');
+      d.className = 'detail';
+      d.textContent = r.summary;
+      li.appendChild(d);
+      ul.appendChild(li);
+    }
+  }
+  const journal = snap?.timeline?.journal ?? [];
+  $('journal-section').hidden = journal.length === 0;
+  const jl = $('journal');
+  jl.replaceChildren();
+  for (const e of journal.slice(-8).reverse()) {
+    const li = document.createElement('li');
+    const when = document.createElement('span');
+    when.className = 'when';
+    when.textContent = `${e.kind} · ${String(e.at).slice(0, 10)}`;
+    const text = document.createElement('span');
+    text.textContent = e.text;
+    li.append(when, text);
+    jl.appendChild(li);
+  }
+}
+
+function updateSection() {
+  const box = unionBox(snap?.report.bodies ?? {});
+  if (box.isEmpty() || view.section === 'off') return;
+  const axis = view.section;
+  const lo = box.min[axis];
+  const hi = box.max[axis];
+  const at = lo + view.sectionPos * (hi - lo);
+  // remove the part nearest the camera so the cut face looks toward you (kept side: normal . p + constant >= 0)
+  const sign = camera.position[axis] < at ? 1 : -1;
+  clipPlane.normal.set(axis === 'x' ? sign : 0, axis === 'y' ? sign : 0, axis === 'z' ? sign : 0);
+  clipPlane.constant = -sign * at;
+}
+
+function setSelected(id) {
+  selected = id;
+  for (const o of modelGroup.children) {
+    const mat = o.material;
+    if (o.isMesh && mat?.emissive && o.name) {
+      const on = o.name === id;
+      mat.emissive.set(on ? css('--accent') : '#000000');
+      mat.emissiveIntensity = on ? 0.45 : 0;
+    }
+  }
+  for (const el of document.querySelectorAll('#bodies .body'))
+    el.classList.toggle('sel', el.dataset.id === id);
+  const card = $('pick');
+  const info = id ? snap?.report.bodies[id] : null;
+  card.hidden = !info;
+  if (info) {
+    card.replaceChildren();
+    const h = document.createElement('strong');
+    h.textContent = id;
+    card.appendChild(h);
+    const lines = [
+      info.material
+        ? `${info.material}${info.massG !== undefined ? ` · ${num(info.massG)} g` : ''}`
+        : null,
+      `${info.bbox.size.map(num).join(' × ')} mm`,
+      `${num(info.volume)} mm³`,
+    ].filter(Boolean);
+    for (const l of lines) {
+      const s = document.createElement('span');
+      s.textContent = l;
+      card.appendChild(s);
+      card.appendChild(document.createElement('br'));
+    }
+    card.lastChild?.remove();
+  }
+  invalidate();
+}
+
+// click (not drag) on a body selects it; click on empty space clears
+const raycaster = new THREE.Raycaster();
+let downAt = null;
+canvas.addEventListener('pointerdown', (e) => {
+  downAt = { x: e.clientX, y: e.clientY };
+});
+canvas.addEventListener('pointerup', (e) => {
+  if (!downAt || e.button !== 0) return;
+  const moved = Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y);
+  downAt = null;
+  if (moved > 5) return;
+  const r = canvas.getBoundingClientRect();
+  raycaster.setFromCamera(
+    new THREE.Vector2(
+      ((e.clientX - r.left) / r.width) * 2 - 1,
+      -((e.clientY - r.top) / r.height) * 2 + 1,
+    ),
+    camera,
+  );
+  const meshes = modelGroup.children.filter((o) => o.isMesh && o.name);
+  const hit = raycaster.intersectObjects(meshes, false).find((h) => {
+    // ignore the part of a mesh that the section plane has cut away
+    return view.section === 'off' || clipPlane.distanceToPoint(h.point) >= -1e-6;
+  });
+  setSelected(hit ? hit.object.name : null);
+});
+
 // ---------- toolbar ----------
 function toggle(id, key, after) {
   const b = $(id);
@@ -424,6 +642,46 @@ function toggle(id, key, after) {
 toggle('t-edges', 'edges');
 toggle('t-dims', 'dims');
 toggle('t-wire', 'wire');
+toggle('t-colour', 'material');
+toggle('t-labels', 'labels');
+$('t-section').addEventListener('click', () => {
+  const order = ['off', 'x', 'y', 'z'];
+  view.section = order[(order.indexOf(view.section) + 1) % order.length];
+  const on = view.section !== 'off';
+  $('t-section').textContent = on ? `Section: ${view.section.toUpperCase()}` : 'Section: off';
+  $('t-section').setAttribute('aria-pressed', String(on));
+  $('section-pos').hidden = !on;
+  buildScene();
+  invalidate();
+});
+$('section-pos').addEventListener('input', (e) => {
+  view.sectionPos = Number(e.target.value);
+  updateSection();
+  invalidate();
+});
+const THEMES = ['auto', 'light', 'dark'];
+function applyTheme(t) {
+  if (t === 'auto') delete document.documentElement.dataset.theme;
+  else document.documentElement.dataset.theme = t;
+  $('t-theme').textContent = `Theme: ${t}`;
+  try {
+    localStorage.setItem('contrapt-theme', t);
+  } catch {
+    /* private window: the choice just is not remembered */
+  }
+  buildScene();
+  invalidate();
+}
+$('t-theme').addEventListener('click', () => {
+  const cur = document.documentElement.dataset.theme ?? 'auto';
+  applyTheme(THEMES[(THEMES.indexOf(cur) + 1) % THEMES.length]);
+});
+try {
+  const saved = localStorage.getItem('contrapt-theme');
+  if (saved && THEMES.includes(saved) && saved !== 'auto') applyTheme(saved);
+} catch {
+  /* storage unavailable */
+}
 $('t-fit').addEventListener('click', fit);
 $('t-rail').addEventListener('click', () => {
   const hidden = document.body.classList.toggle('rail-hidden');
@@ -432,6 +690,7 @@ $('t-rail').addEventListener('click', () => {
 });
 canvas.addEventListener('dblclick', fit);
 addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && selected) setSelected(null);
   if (e.key === 'f' && !e.metaKey && !e.ctrlKey && !e.altKey) fit();
 });
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {

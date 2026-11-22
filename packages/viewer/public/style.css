@@ -30,6 +30,24 @@
   }
 }
 
+:root[data-theme="dark"] {
+  --ground-top: #1b2128;
+  --ground-bottom: #0f1317;
+  --panel: #171c22;
+  --ink: #e6ebf1;
+  --muted: #93a0ae;
+  --rule: #29313a;
+  --accent: #7b97ff;
+  --ok: #4cc38a;
+  --err: #ff7a70;
+  --skip: #66717d;
+  --grid: #2d3640;
+  color-scheme: dark;
+}
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -351,4 +369,98 @@ body.rail-hidden #tools {
   #tools {
     transition: none;
   }
+}
+
+/* ---- selection card, labels, requirements, journal, section slider ---- */
+#pick {
+  position: absolute;
+  left: 1rem;
+  top: 1rem;
+  max-width: 18rem;
+  padding: 0.6rem 0.8rem;
+  background: var(--panel);
+  color: var(--ink);
+  border: 1px solid var(--rule);
+  border-radius: 0.5rem;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.18);
+  font-size: 0.85rem;
+}
+#pick strong {
+  display: block;
+  font-size: 0.95rem;
+}
+#pick span {
+  color: var(--muted);
+}
+.tag {
+  position: absolute;
+  transform: translate(-50%, -140%);
+  padding: 0.1rem 0.4rem;
+  font-size: 0.75rem;
+  color: var(--ink);
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  border-radius: 0.3rem;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.body.sel {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 0.3rem;
+}
+.body {
+  cursor: pointer;
+}
+#specs,
+#journal {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+#specs li,
+#journal li {
+  padding: 0.35rem 0;
+  border-top: 1px solid var(--rule);
+  font-size: 0.85rem;
+}
+#specs li:first-child,
+#journal li:first-child {
+  border-top: 0;
+}
+#specs .sid {
+  font-weight: 600;
+}
+#specs .state {
+  font-weight: 700;
+  margin-right: 0.4rem;
+}
+#specs li.pass .state {
+  color: var(--ok);
+}
+#specs li.fail .state {
+  color: var(--err);
+}
+#specs .why,
+#specs .detail,
+#journal .when {
+  display: block;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+#specs .est {
+  color: var(--muted);
+  font-size: 0.75rem;
+  margin-left: 0.3rem;
+}
+.count {
+  font-weight: 400;
+  color: var(--muted);
+  font-size: 0.8rem;
+  margin-left: 0.3rem;
+}
+#section-pos {
+  width: 7rem;
+  vertical-align: middle;
+  accent-color: var(--accent);
 }

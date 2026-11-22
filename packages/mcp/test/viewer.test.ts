@@ -126,3 +126,36 @@ test('SSE pushes a new version when the model changes', async () => {
   const v = await got;
   assert.equal(v, session.version);
 });
+
+test('the snapshot carries the Proof Loop verdict, and touch() notifies listeners without a rebuild', async () => {
+  const before = JSON.parse((await get('/api/state')).body);
+  assert.equal(before.specs, undefined);
+  let pings = 0;
+  const off = session.onChange(() => {
+    pings++;
+  });
+  session.builder.addSpec({
+    id: 'width',
+    kind: 'dimension',
+    body: 'b',
+    axis: 'x',
+    max: 5,
+    description: 'must fit the slot',
+  });
+  session.builder.addSpec({ id: 'height', kind: 'dimension', body: 'b', axis: 'z', min: 5 });
+  session.touch();
+  off();
+  assert.equal(pings, 1);
+  const s = JSON.parse((await get('/api/state')).body);
+  assert.equal(s.specs.total, 2);
+  assert.equal(s.specs.passing, 1);
+  const width = s.specs.results.find((r: { id: string }) => r.id === 'width');
+  assert.equal(width.ok, false);
+  assert.match(width.summary, /EXCEEDS max 5/);
+  assert.equal(width.description, 'must fit the slot');
+  assert.ok(s.version > before.version);
+  session.builder.removeSpec('width');
+  session.builder.removeSpec('height');
+  session.touch();
+  assert.equal(JSON.parse((await get('/api/state')).body).specs, undefined);
+});
