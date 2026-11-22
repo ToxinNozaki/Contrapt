@@ -71,6 +71,10 @@ export interface HexBuild {
   B: Float64Array[];
   G: Float64Array[];
   volume: number;
+  /** detJ at each of the 8 Gauss points */
+  dets: number[];
+  /** inverse of the incompatible-mode block (9 x 9): alpha = R u + KaaInv f_a under a load f_a */
+  KaaInv: Float64Array;
 }
 
 function invert9(A: Float64Array): Float64Array {
@@ -116,10 +120,12 @@ export function buildHex(xe: ArrayLike<number>, D: Float64Array): HexBuild {
   const Bs: Float64Array[] = [];
   const Gs: Float64Array[] = [];
   let volume = 0;
+  const dets: number[] = [];
   for (const [xi, eta, zeta] of GAUSS) {
     const { dn, det, inv } = jacobian(xe, xi, eta, zeta);
     if (!(det > 0)) throw new Error('inverted element');
     volume += det;
+    dets.push(det);
     const B = new Float64Array(6 * 24);
     for (let a = 0; a < 8; a++) {
       const g = dn[a] as number[];
@@ -229,7 +235,7 @@ export function buildHex(xe: ArrayLike<number>, D: Float64Array): HexBuild {
       for (let k = 0; k < 9; k++) v += (KaaInv[i * 9 + k] as number) * (Kua[j * 9 + k] as number);
       R[i * 24 + j] = -v;
     }
-  return { Ke, R, B: Bs, G: Gs, volume };
+  return { Ke, R, B: Bs, G: Gs, volume, dets, KaaInv };
 }
 
 // ---- snapping boundary nodes onto the surface ----------------------------------------------------------------------
@@ -339,4 +345,26 @@ export function indexSurface(
       return best;
     },
   };
+}
+
+/** Shape values, physical shape-function gradients and detJ at the 8 Gauss points of a (distorted) hexahedron. */
+export function hexGaussGradients(
+  xe: ArrayLike<number>,
+): { N: number[]; dNdx: number[][]; det: number }[] {
+  return GAUSS.map(([xi, eta, zeta]) => {
+    const { dn, det, inv } = jacobian(xe, xi, eta, zeta);
+    if (!(det > 0)) throw new Error('inverted element');
+    const N = HEX_SIGNS.map(
+      ([sx, sy, sz]) => ((1 + xi * sx) * (1 + eta * sy) * (1 + zeta * sz)) / 8,
+    );
+    const dNdx = dn.map((g) =>
+      [0, 1, 2].map((i) => {
+        let s = 0;
+        for (let j = 0; j < 3; j++)
+          s += ((inv[j] as number[])[i] as number) * ((g as number[])[j] as number);
+        return s;
+      }),
+    );
+    return { N, dNdx, det };
+  });
 }

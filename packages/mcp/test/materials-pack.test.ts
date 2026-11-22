@@ -15,7 +15,8 @@ const pack = readFileSync(
 const nums = (cell: string) => (cell.match(/\d+(?:\.\d+)?/g) ?? []).map(Number);
 
 const rows = new Map<string, string[]>();
-for (const line of pack.split('\n')) {
+// the main properties table is everything before the thermal table
+for (const line of pack.slice(0, pack.indexOf('## Thermal properties')).split('\n')) {
   if (!line.startsWith('|')) continue;
   const cells = line
     .split('|')
@@ -55,4 +56,50 @@ test('every pack material row exists in the library (so the pack never promises 
     if (!cells[3] || nums(cells[3]).length === 0) continue;
     assert.ok(known.has(label), `pack row "${label}" has no library entry`);
   }
+});
+
+test('the thermal-properties table in the pack matches the library: conductivity and expansion, and "varies" means undefined', () => {
+  const start = pack.indexOf('## Thermal properties');
+  const end = pack.indexOf('## Choosing a material');
+  assert.ok(start > 0 && end > start, 'thermal table present');
+  const trows = new Map<string, string[]>();
+  for (const line of pack.slice(start, end).split('\n')) {
+    if (!line.startsWith('|')) continue;
+    const cells = line
+      .split('|')
+      .slice(1, -1)
+      .map((c) => c.trim());
+    if (cells[0]) trows.set(cells[0], cells);
+  }
+  let checked = 0;
+  for (const m of Object.values(MATERIALS)) {
+    const row = trows.get(m.packRow);
+    if (m.conductivityWmK === undefined && m.expansionPerK === undefined) {
+      assert.equal(
+        row,
+        undefined,
+        `${m.name} has no thermal data and must not appear in the table`,
+      );
+      continue;
+    }
+    assert.ok(row, `${m.name}: no thermal row "${m.packRow}"`);
+    const k = nums(row[1] ?? '');
+    if (m.conductivityWmK === undefined)
+      assert.equal(k.length, 0, `${m.name}: pack gives k but the library does not`);
+    else assert.deepEqual(k, [m.conductivityWmK], `${m.name}: conductivity`);
+    const a = nums(row[2] ?? '');
+    if (m.expansionPerK === undefined)
+      assert.equal(a.length, 0, `${m.name}: pack gives alpha but the library does not`);
+    else
+      assert.ok(
+        Math.abs((a[0] ?? -1) - m.expansionPerK * 1e6) < 1e-9,
+        `${m.name}: expansion ${a} vs ${m.expansionPerK}`,
+      );
+    checked++;
+  }
+  assert.ok(checked >= 15);
+  // sanity: metals out-conduct plastics by orders of magnitude
+  assert.ok(
+    (MATERIALS['6061-T6']?.conductivityWmK ?? 0) > 100 * (MATERIALS.PLA?.conductivityWmK ?? 1),
+  );
 });

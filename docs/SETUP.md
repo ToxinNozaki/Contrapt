@@ -170,6 +170,7 @@ geometry converts and imports exactly; sketches, features and history are not tr
 | `section_properties`, `beam_check`, `column_check` | Cross-section properties and hand-calculation beam and column checks |
 | `frame_analysis`, `frame_modes`, `frame_buckling` | 3D beam-element FEA: stress and deflection, natural frequencies, Euler buckling load factors |
 | `solid_fea` | Stress and displacement of a solid body on a fitted hexahedral grid |
+| `thermal_analysis` | Steady-state heat conduction and convection in a solid (heat paths, temperatures, heat balance), with optional thermal stress |
 | `mechanism_sweep`, `fourbar_check`, `dynamics_sim` | Planar linkage kinematics, four-bar Grashof analysis, 1-DOF dynamics in SI units |
 | `print_check` | FDM overhangs, support estimate, best print orientation, thin walls, build-volume fit |
 | `drawing` | SVG drawing sheet: three views, hidden lines, overall dimensions, title block |

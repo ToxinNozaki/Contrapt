@@ -137,6 +137,7 @@ export {
   type SolidLoad,
   type SolidRegion,
   type SolidSupport,
+  selectNodes,
   solidFea,
 } from './solidfea.ts';
 export {
@@ -152,6 +153,7 @@ export {
   type SpecResult,
   SpecSchema,
 } from './specs.ts';
+export { solveThermal, type ThermalInput, type ThermalResult } from './thermal.ts';
 export {
   type EdgeSelector,
   emptyTimeline,

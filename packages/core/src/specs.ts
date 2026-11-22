@@ -8,6 +8,7 @@ import { analyzeFrame, frameBuckling, frameModes } from './fea.ts';
 import {
   buildFrameInput,
   FrameDefSchema,
+  RegionSchema,
   SolidLoadSchema,
   SolidSupportSchema,
 } from './framebuild.ts';
@@ -15,6 +16,7 @@ import { checkInterference } from './interference.ts';
 import { getMaterial, MATERIAL_NAMES } from './materials.ts';
 import { sectionProperties } from './section.ts';
 import { defaultSolidElementSize, solidFea } from './solidfea.ts';
+import { solveThermal } from './thermal.ts';
 
 const Id = z
   .string()
@@ -105,6 +107,22 @@ export const SpecSchema = z.discriminatedUnion('kind', [
       .optional()
       .describe('against yield, on the 99th-percentile von Mises stress'),
   }),
+  z.object({
+    ...common,
+    kind: z.literal('thermal'),
+    body: z.string().describe('a body with a material that has a thermal conductivity'),
+    fixedTemperatures: z
+      .array(z.object({ region: RegionSchema, temperatureC: z.number() }))
+      .optional(),
+    heatInputs: z.array(z.object({ region: RegionSchema, powerW: z.number() })).optional(),
+    convections: z
+      .array(z.object({ region: RegionSchema, hWm2K: z.number().positive(), ambientC: z.number() }))
+      .optional(),
+    generationW: z.number().optional(),
+    elementSizeMm: z.number().positive().optional(),
+    maxTemperatureC: z.number().optional().describe('the hottest point must stay below this'),
+    minTemperatureC: z.number().optional().describe('the coldest point must stay above this'),
+  }),
 ]);
 export type Spec = z.infer<typeof SpecSchema>;
 
@@ -133,7 +151,7 @@ export interface SpecResult {
 }
 
 /** Spec kinds that run a finite-element analysis: seconds, not milliseconds. */
-export const HEAVY_KINDS: readonly Spec['kind'][] = ['frame', 'solid_fea'];
+export const HEAVY_KINDS: readonly Spec['kind'][] = ['frame', 'solid_fea', 'thermal'];
 export interface EvaluateOptions {
   /** skip heavy analyses and report them as pending (used for the live verdict after every change) */
   live?: boolean;
@@ -251,6 +269,65 @@ export function evaluateSpec(model: Model, spec: Spec, opts: EvaluateOptions = {
           );
         const j = limits.length ? judge(limits) : { ok: true, summary: 'no checks apply' };
         return { ...base, ...j, summary: j.summary + note, fea: true };
+      }
+      case 'thermal': {
+        const shape = model.bodies.get(spec.body);
+        const info = model.report.bodies[spec.body];
+        if (!shape || !info) body(model, spec.body);
+        const matName = model.materials.get(spec.body);
+        if (!matName) throw new Error(`${spec.body} has no material: add a material step`);
+        const mat = getMaterial(matName);
+        if (mat.conductivityWmK === undefined)
+          throw new Error(`${matName} has no thermal conductivity in the library`);
+        if (spec.maxTemperatureC === undefined && spec.minTemperatureC === undefined)
+          throw new Error('a thermal spec needs maxTemperatureC and/or minTemperatureC');
+        const th = solveThermal({
+          shape: shape as NonNullable<typeof shape>,
+          conductivity: mat.conductivityWmK,
+          elementSize:
+            spec.elementSizeMm ??
+            defaultSolidElementSize(
+              (info as NonNullable<typeof info>).volume,
+              (info as NonNullable<typeof info>).bbox.size,
+            ),
+          fixedTemperatures: spec.fixedTemperatures?.map((x) => ({
+            region: x.region as never,
+            temperature: x.temperatureC,
+          })),
+          heatInputs: spec.heatInputs?.map((x) => ({ region: x.region as never, power: x.powerW })),
+          convections: spec.convections?.map((x) => ({
+            region: x.region as never,
+            h: x.hWm2K,
+            ambient: x.ambientC,
+          })),
+          generation: spec.generationW,
+        });
+        const limits: Limit[] = [];
+        if (spec.maxTemperatureC !== undefined)
+          limits.push({
+            label: 'hottest point',
+            actual: th.temperature.max,
+            max: spec.maxTemperatureC,
+            unit: 'C',
+          });
+        if (spec.minTemperatureC !== undefined)
+          limits.push({
+            label: 'coldest point',
+            actual: th.temperature.min,
+            min: spec.minTemperatureC,
+            unit: 'C',
+          });
+        const j = judge(limits);
+        const warn = th.converged
+          ? ''
+          : '; WARNING: the solver did not converge, result unreliable';
+        return {
+          ...base,
+          ...j,
+          summary: `${j.summary} [${th.elements} elements${warn}]`,
+          ok: j.ok && th.converged,
+          fea: true,
+        };
       }
       case 'solid_fea': {
         const shape = model.bodies.get(spec.body);

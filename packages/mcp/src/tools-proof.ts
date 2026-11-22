@@ -15,7 +15,7 @@ import { z } from 'zod';
 import { feedback, j, SafeName, type ToolDef } from './tools.ts';
 
 const HAND_ESTIMATE =
-  'Beam specs are closed-form hand estimates; frame and solid_fea specs run real finite-element analysis (beam elements, and a fitted hexahedral grid whose peak stress at sharp corners is approximate). Contrapt does not run thermal, fatigue or dynamic simulation. Measured geometry (dimensions, volume, mass, interference, gaps) is exact.';
+  'Beam specs are closed-form hand estimates; frame and solid_fea specs run real finite-element analysis (beam elements, and a fitted hexahedral grid whose peak stress at sharp corners is approximate). thermal specs run steady-state conduction. Contrapt does not run transient thermal, fluid, fatigue or multi-body dynamic simulation. Measured geometry (dimensions, volume, mass, interference, gaps) is exact.';
 
 function lines(results: SpecResult[]) {
   return results.map((r) => ({
@@ -34,7 +34,7 @@ export const proofTools: ToolDef[] = [
   {
     name: 'add_spec',
     description:
-      'Add (or replace, same id) a requirement the design must meet. Saved with the model and re-checked after every change. kinds: dimension {body, axis x|y|z, min?, max?}; mass {body, minG?, maxG?}; volume {body, minMm3?, maxMm3?}; no_interference {a, b, allowTouching?}; min_gap {a, b, minMm}; beam {sketch, support, load, value, lengthMm, material, minSafetyFactor?, maxDeflectionMm?, minSpanOverDeflection?, bend?, selfWeight?} (hand estimate); frame {frame: same definition as frame_analysis, maxDisplacementMm?, minSafetyFactor?, minBucklingFactor?, minFrequencyHz?} and solid_fea {body, supports, loads?, gravity?, elementSizeMm?, maxDisplacementMm?, minSafetyFactor?} run real FEA (seconds): they show as PENDING in the live status after each change and are run by check_specs, optimize_param and build_pack. Write specs BEFORE modelling, from the stated needs.',
+      'Add (or replace, same id) a requirement the design must meet. Saved with the model and re-checked after every change. kinds: dimension {body, axis x|y|z, min?, max?}; mass {body, minG?, maxG?}; volume {body, minMm3?, maxMm3?}; no_interference {a, b, allowTouching?}; min_gap {a, b, minMm}; beam {sketch, support, load, value, lengthMm, material, minSafetyFactor?, maxDeflectionMm?, minSpanOverDeflection?, bend?, selfWeight?} (hand estimate); frame {frame: same definition as frame_analysis, maxDisplacementMm?, minSafetyFactor?, minBucklingFactor?, minFrequencyHz?}, solid_fea {body, supports, loads?, gravity?, elementSizeMm?, maxDisplacementMm?, minSafetyFactor?} and thermal {body, fixedTemperatures?, heatInputs?, convections?, generationW?, maxTemperatureC?, minTemperatureC?} run real finite-element analyses (seconds): they show as PENDING in the live status after each change and are run by check_specs, optimize_param and build_pack. Write specs BEFORE modelling, from the stated needs.',
     input: { spec: SpecSchema },
     run: async (a, ctx) => {
       const id = ctx.session.builder.addSpec(a.spec);

@@ -93,6 +93,22 @@ export const RegionSchema = z
       }),
     }),
     z.object({ box: z.object({ min: Vec3, max: Vec3 }) }),
+    z.object({
+      cylinder: z
+        .object({
+          axis: z.enum(['X', 'Y', 'Z']),
+          center: Vec3.describe('a point on the axis, mm'),
+          radius: z
+            .number()
+            .positive()
+            .describe('nodes within about half an element of this radius'),
+          range: z
+            .tuple([z.number(), z.number()])
+            .optional()
+            .describe('limit to this interval along the axis (world coordinates, mm)'),
+        })
+        .describe('a cylindrical surface such as a bore or the wall of a tube'),
+    }),
   ])
   .describe(
     'where: a flat face of the body picked by outward normal, or a world box (mm) that selects the nodes inside it',

@@ -3,6 +3,7 @@
 import {
   analyzeFrame,
   buildFrameInput,
+  defaultSolidElementSize,
   type FrameDef,
   FrameDefShape,
   type FrameInput,
@@ -11,7 +12,10 @@ import {
   getMaterial,
   MATERIAL_NAMES,
   RegionSchema,
+  SolidLoadSchema,
+  SolidSupportSchema,
   solidFea,
+  solveThermal,
   Vec3,
 } from '@contrapt/core';
 import { z } from 'zod';
@@ -30,9 +34,194 @@ const NOTE =
 
 export const feaTools: ToolDef[] = [
   {
+    name: 'thermal_analysis',
+    description:
+      'Steady-state heat conduction in a SOLID body on the same fitted hexahedral mesh as solid_fea, optionally followed by thermal stress. Give the heat paths: fixed-temperature surfaces (a face, box or cylinder region), heat input over a surface (W), convection to an ambient (h in W/(m2 K) and ambient temperature), and/or heat generated inside (W). Returns the temperature range and where it peaks, the heat balance (in, out through fixed surfaces and convection, imbalance, which should be ~0), the largest heat flux, and mesh and solver facts. With stress: {supports, loads?, reference_temperature_c}, the temperature field also drives thermal expansion in the elasticity solve (material expansion coefficient), returning displacement, von Mises stress and safety factor. Conductivity and expansion come from the library material (typical values: check the datasheet). Validated against slab, generation, fin and tube closed forms; thermal stress against sigma = E alpha dT. Steady state only: no transients, radiation or temperature-dependent properties.',
+    input: {
+      body: z.string(),
+      material: z.enum(MATERIAL_NAMES).optional().describe('defaults to the body material'),
+      fixed_temperatures: z
+        .array(z.object({ region: RegionSchema, temperature_c: z.number() }))
+        .optional()
+        .describe(
+          'surfaces held at a temperature (a heat sink, a hot plate, a bore at coolant temperature)',
+        ),
+      heat_inputs: z
+        .array(z.object({ region: RegionSchema, power_w: z.number() }))
+        .optional()
+        .describe(
+          'total heat INTO the body over the exposed faces of the region (a chip, a heater)',
+        ),
+      convections: z
+        .array(
+          z.object({ region: RegionSchema, h_w_m2k: z.number().positive(), ambient_c: z.number() }),
+        )
+        .optional()
+        .describe(
+          'convection to air or liquid: natural air about 5 to 25, forced air 25 to 250, water 500 to 10000 W/(m2 K)',
+        ),
+      generation_w: z
+        .number()
+        .optional()
+        .describe('total heat generated uniformly inside the body'),
+      element_size_mm: z.number().positive().optional(),
+      stress: z
+        .object({
+          supports: z.array(SolidSupportSchema).min(1),
+          loads: z.array(SolidLoadSchema).optional(),
+          reference_temperature_c: z
+            .number()
+            .optional()
+            .describe('the stress-free temperature, default 20'),
+          gravity: z.boolean().optional(),
+        })
+        .optional(),
+    },
+    readOnly: true,
+    run: async (a, ctx) => {
+      const model = ctx.session.model;
+      if (!model) throw new Error('Nothing built yet');
+      const id = a.body as string;
+      const shape = model.bodies.get(id);
+      const info = model.report.bodies[id];
+      if (!shape || !info)
+        throw new Error(`No body "${id}". Bodies: ${[...model.bodies.keys()].join(', ')}`);
+      const matName = (a.material as string | undefined) ?? model.materials.get(id);
+      if (!matName) throw new Error(`${id} has no material: add a material step or pass material`);
+      const mat = getMaterial(matName);
+      if (mat.conductivityWmK === undefined)
+        throw new Error(`${matName} has no thermal conductivity in the library`);
+      const h =
+        (a.element_size_mm as number | undefined) ??
+        defaultSolidElementSize(info.volume, info.bbox.size);
+      const t0 = Date.now();
+      const th = solveThermal({
+        shape,
+        conductivity: mat.conductivityWmK,
+        elementSize: h,
+        fixedTemperatures: (
+          a.fixed_temperatures as { region: never; temperature_c: number }[] | undefined
+        )?.map((x) => ({
+          region: x.region,
+          temperature: x.temperature_c,
+        })),
+        heatInputs: (a.heat_inputs as { region: never; power_w: number }[] | undefined)?.map(
+          (x) => ({
+            region: x.region,
+            power: x.power_w,
+          }),
+        ),
+        convections: (
+          a.convections as { region: never; h_w_m2k: number; ambient_c: number }[] | undefined
+        )?.map((x) => ({
+          region: x.region,
+          h: x.h_w_m2k,
+          ambient: x.ambient_c,
+        })),
+        generation: a.generation_w as number | undefined,
+      });
+      const warn = [...th.warnings];
+      if (Math.abs(th.volumeRatio - 1) > 0.05)
+        warn.push(
+          `The mesh volume is ${Math.round((th.volumeRatio - 1) * 1000) / 10}% off the true volume: reduce element_size_mm`,
+        );
+      const out: Record<string, unknown> = {
+        verdict: `temperature ${round(th.temperature.min, 2)} to ${round(th.temperature.max, 2)} C (hottest at ${roundAll(th.temperature.maxAt, 1).join(', ')} mm); heat balance ${Math.abs(th.heat.imbalanceW) < 1e-3 * Math.max(th.heat.inputW, th.heat.fixedInW, th.heat.fixedOutW, 1e-9) + 1e-9 ? 'closes' : 'does NOT close'}`,
+        temperature_c: {
+          min: round(th.temperature.min, 3),
+          max: round(th.temperature.max, 3),
+          mean: round(th.temperature.mean, 3),
+          hottest_at_mm: roundAll(th.temperature.maxAt, 2),
+          coldest_at_mm: roundAll(th.temperature.minAt, 2),
+        },
+        heat_w: {
+          input: round(th.heat.inputW, 5),
+          in_through_fixed_temperature_surfaces: round(th.heat.fixedInW, 5),
+          out_through_fixed_temperature_surfaces: round(th.heat.fixedOutW, 5),
+          in_by_convection: round(th.heat.convectionInW, 5),
+          out_by_convection: round(th.heat.convectionOutW, 5),
+          imbalance: Number(th.heat.imbalanceW.toExponential(2)),
+        },
+        max_heat_flux_w_m2: {
+          value: round(th.maxHeatFlux.value * 1e6, 2),
+          at_mm: roundAll(th.maxHeatFlux.at, 2),
+        },
+        material: { name: matName, conductivity_w_mk: mat.conductivityWmK },
+        mesh: {
+          element_size_mm: th.elementSizeMm,
+          elements: th.elements,
+          nodes: th.nodes,
+          volume_ratio: round(th.volumeRatio, 4),
+          fitted: th.fitted,
+        },
+        solver: {
+          converged: th.converged,
+          iterations: th.iterations,
+          seconds: round((Date.now() - t0) / 1000, 2),
+        },
+      };
+      if (a.stress) {
+        const st = a.stress as {
+          supports: never;
+          loads?: never;
+          reference_temperature_c?: number;
+          gravity?: boolean;
+        };
+        if (mat.expansionPerK === undefined || !mat.youngsModulusGPa)
+          throw new Error(
+            `${matName} has no expansion coefficient or modulus in the library: stress cannot be computed`,
+          );
+        const r = solidFea({
+          shape,
+          E: mat.youngsModulusGPa * 1000,
+          yield: mat.yieldMPa,
+          density: mat.density,
+          elementSize: h,
+          supports: st.supports,
+          loads: st.loads,
+          gravity: st.gravity,
+          thermal: {
+            temperatures: th.temperatures,
+            alpha: mat.expansionPerK,
+            referenceTemperature: st.reference_temperature_c ?? 20,
+          },
+        });
+        for (const w of r.warnings) if (!warn.includes(w)) warn.push(w);
+        out.thermal_stress = {
+          reference_temperature_c: st.reference_temperature_c ?? 20,
+          expansion_per_k: mat.expansionPerK,
+          max_displacement: {
+            mm: round(r.maxDisplacement.value, 5),
+            at_mm: roundAll(r.maxDisplacement.at, 2),
+          },
+          von_mises_MPa: {
+            peak: round(r.maxVonMises.value, 3),
+            p99: round(r.p99VonMises, 3),
+            median: round(r.medianVonMises, 3),
+            yield: mat.yieldMPa,
+          },
+          safety_factor_p99:
+            r.safetyFactorP99 === undefined ? undefined : round(r.safetyFactorP99, 2),
+          safety_factor_peak:
+            r.safetyFactorPeak === undefined ? undefined : round(r.safetyFactorPeak, 2),
+          reaction_N: roundAll(r.reaction, 3),
+          equilibrium_error_N: Number(r.equilibriumErrorN.toExponential(2)),
+          converged: r.converged,
+        };
+      }
+      return j({
+        ...out,
+        ...(warn.length ? { warnings: warn } : {}),
+        notes: [
+          'Steady-state conduction in a solid with constant material properties; convection and flux are applied on whole exposed faces of the chosen regions (lumped to nodes). No radiation, no transients, no contact resistance between parts. Thermal stress is linear elastic with the typical expansion coefficient from the library. Peak stress at sharp corners and constraint edges is mesh-dependent (read p99, refine, compare). An estimate for sizing, not a certification.',
+        ],
+      });
+    },
+  },
+  {
     name: 'solid_fea',
     description:
-      'Static stress and displacement analysis of a SOLID body (3D linear elasticity: a regular grid of 8-node hexahedra with incompatible modes whose boundary nodes are snapped onto the exact surface, so curved boundaries are represented as curved; nodal stress recovery; matrix-free CG solver). Give supports (a face or box held fixed; optional dofs x/y/z), loads (a face or box + total force in N), optional gravity, and a library material. Returns max displacement, max and 99th-percentile von Mises stress with locations, safety factors vs yield, reactions, equilibrium check, grid quality (volume ratio) and solver convergence. Validated against beam theory, the frame solver and the handbook stress-concentration factor of a plate with a hole (within about 1% at 5 elements per hole radius, 8% at 2.5). Peak stress at sharp re-entrant corners and under point loads or fixed faces is still mesh-dependent and singular: read the 99th percentile, refine with element_size_mm and compare. Typical runs take seconds; keep the grid under about 40k elements.',
+      'Static stress and displacement analysis of a SOLID body (3D linear elasticity: a regular grid of 8-node hexahedra with incompatible modes whose boundary nodes are snapped onto the exact surface, so curved boundaries are represented as curved; nodal stress recovery; matrix-free CG solver). Give supports (a face or box held fixed; optional dofs x/y/z), loads (a face or box + total force in N), optional gravity, and a library material. Returns max displacement, max and 99th-percentile von Mises stress with locations, safety factors vs yield, reactions, equilibrium check, grid quality (volume ratio) and solver convergence. Validated against beam theory, the frame solver and the handbook stress-concentration factor of a plate with a hole (within 1.5% at 5 elements per hole radius, 4% at 2.5; slender cantilevers and bars within 0.5%). Peak stress at sharp re-entrant corners and under point loads or fixed faces is still mesh-dependent and singular: read the 99th percentile, refine with element_size_mm and compare. Typical runs take seconds; keep the grid under about 40k elements.',
     input: {
       body: z.string(),
       material: z.enum(MATERIAL_NAMES),

@@ -73,7 +73,7 @@ Status: `[ ]` planned · `[~]` in progress · `[x]` done · `[-]` dropped (say w
 ## P4 — Proof Loop (differentiator)
 
 - [x] Spec language (requirements-as-code, saved with the model): dimension, mass, volume, no_interference, min_gap, beam (hand-estimate, flagged); simulation-backed kinds pending real FEA - 2026-11-17
-- [x] FEA-backed specs: `frame` (displacement, safety factor, buckling factor, frequency) and `solid_fea` (displacement, safety factor on p99 stress) run real finite-element analyses; shown as PENDING in the live status after each change and run by check_specs, optimize_param and build_pack; the optimiser can drive them - 2026-11-23
+- [x] FEA-backed specs: `frame` (displacement, safety factor, buckling factor, frequency) and `solid_fea` (displacement, safety factor on p99 stress) and `thermal` (max/min temperature) run real finite-element analyses; shown as PENDING in the live status after each change and run by check_specs, optimize_param and build_pack; the optimiser can drive them - 2026-11-23
 - [x] `check_specs` + live spec verdict in every tool reply - 2026-11-17
 - [x] `optimize_param`: one-parameter sweep + bisection over real rebuilds against specs (multi-parameter pending) - 2026-11-17
 - [x] Design Journal (journal_add/get_journal, saved with the model, included in the Build Pack); per-iteration renders and metrics pending - 2026-11-17
@@ -89,7 +89,7 @@ Status: `[ ]` planned · `[~]` in progress · `[x]` done · `[-]` dropped (say w
 - [x] Modal analysis for frames (frame_modes, consistent mass, Jacobi eigen-solver), validated vs Euler-Bernoulli cantilever and pinned-pinned frequencies (mode shapes pending) - 2026-11-19
 - [ ] Modal mode shapes, and modal analysis of solids (frame natural frequencies done)
 - [~] Linear buckling for frames (frame_buckling: geometric stiffness + generalized eigenproblem; Euler loads for fixed-free, pinned-pinned, fixed-fixed and fixed-pinned columns within 0.5%) - 2026-11-22. Buckling of solids and plates pending
-- [ ] Thermal (steady-state, then transient) — stretch
+- [~] Thermal: steady-state conduction on the fitted solid mesh with fixed-temperature surfaces, heat input, convection and internal generation, heat balance, cylinder regions (thermal_analysis); thermal stress through the elasticity solve; thermal Proof Loop spec - 2026-11-23. Transients, radiation and temperature-dependent properties pending
 - [~] Dynamics: 1-DOF rotary/linear RK4 in SI (dynamics_sim: inertia, damping, spring, pendulum gravity, Coulomb friction, DC-motor line, stops), validated vs pendulum (incl. 90 degree elliptic), spring-mass-damper, motor spin-up, friction stop - 2026-11-22. Multi-body dynamics, contacts and coupled DOFs pending
 - [~] Kinematic sweeps: planar linkages via the constraint solver (mechanism_sweep: lock detection, pin paths, joint angles, branch-flip warning) and closed-form four-bar Grashof/transmission analysis (fourbar_check), validated vs slider-crank - 2026-11-22. 3D motion studies, plots and playback pending
 - [~] Validation suite: cantilever, beam modes, torsion, gravity run in CI (core/test/fea.test.ts); pendulum and four-bar pending

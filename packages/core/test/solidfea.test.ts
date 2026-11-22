@@ -44,13 +44,13 @@ test('axial bar: elongation F L / E A and uniform stress F / A away from the roo
   });
   assert.ok(r.converged, `${r.relativeResidual}`);
   assert.ok(r.equilibriumErrorN < 1e-3 * 500, `${r.equilibriumErrorN}`);
-  rel(r.maxDisplacement.value, (500 * 40) / (E * 25), 0.03, 'elongation');
+  rel(r.maxDisplacement.value, (500 * 40) / (E * 25), 0.01, 'elongation');
   // away from the clamped root the field is uniaxial 20 MPa
   rel(r.medianVonMises, 20, 0.03, 'median stress');
   assert.ok(Math.abs(r.reaction[0] + 500) < 0.5, `${r.reaction}`);
 });
 
-test('cantilever 120 x 6 x 6 with a tip load: tip deflection within 5% of beam theory + shear, mid-span stress, root band', async () => {
+test('cantilever 120 x 6 x 6 with a tip load: tip deflection within 1.5% of beam theory + shear, mid-span stress, root band', async () => {
   const shape = await body(bar(120));
   const F = 60;
   const r = solidFea({
@@ -67,7 +67,7 @@ test('cantilever 120 x 6 x 6 with a tip load: tip deflection within 5% of beam t
   const bending = (F * 120 ** 3) / (3 * E * I); // 4.571
   const shear = (F * 120) / ((5 / 6) * (E / 2.6) * 36); // Timoshenko correction, 0.2%
   // a clamped root face also holds the Poisson contraction, so the solid is slightly stiffer than the beam: 3-4% here
-  rel(r.maxDisplacement.value, bending + shear, 0.05, 'tip deflection');
+  rel(r.maxDisplacement.value, bending + shear, 0.015, 'tip deflection');
   assert.ok(r.maxDisplacement.at[0] > 118, `max displacement at ${r.maxDisplacement.at}`);
   // stress in the top layer of elements near mid-span: sigma = M c / I with M = F (L - x), element centre 0.75 mm below the top
   let near: number | undefined;

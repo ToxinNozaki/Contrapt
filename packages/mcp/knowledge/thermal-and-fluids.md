@@ -4,7 +4,7 @@ summary: Thermal expansion, conduction and cooling, thin-wall pressure, pneumati
 ---
 # Thermal and fluids basics
 
-Hand estimates only; Contrapt has no thermal or flow simulation yet. Pressurised systems are a real safety
+Fluids and transient heating are hand estimates only (Contrapt has no flow simulation). Steady-state conduction and convection can be solved with `thermal_analysis` (heat paths, temperatures, thermal stress): use the convection coefficients below as inputs. Pressurised systems are a real safety
 hazard: see `safety-and-ethics`.
 
 ## Thermal expansion

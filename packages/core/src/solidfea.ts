@@ -8,13 +8,16 @@
 import { measureVolume, type Shape3D } from 'replicad';
 import { type FaceNormal, findFace } from './faces.ts';
 import type { V3 } from './path.ts';
-import { buildHex, indexSurface, minCornerJacobian } from './solidfit.ts';
+import { buildHex, HEX_SIGNS, hexGaussGradients } from './solidfit.ts';
+import { buildSolidMesh, faceArea, faceCorners } from './solidmesh.ts';
 
 export interface SolidRegion {
   /** a world-space box; nodes inside it (within half an element) are selected */
   box?: { min: V3; max: V3 };
   /** or a flat face of the body picked by outward normal (optionally the one nearest `near`) */
   face?: { normal: FaceNormal; near?: V3 };
+  /** or a cylindrical surface (a bore, a tube wall): nodes at about this radius from the axis */
+  cylinder?: { axis: 'X' | 'Y' | 'Z'; center: V3; radius: number; range?: [number, number] };
 }
 
 export interface SolidSupport {
@@ -41,6 +44,16 @@ export interface SolidFeaInput {
   /** add self weight acting along -Z */
   gravity?: boolean;
   maxElements?: number;
+  /**
+   * thermal stress: a temperature at every node (from solveThermal on the same body, elementSize, fit and
+   * maxElements, so the node order matches), the expansion coefficient and the stress-free reference temperature
+   */
+  thermal?: {
+    temperatures: Float64Array;
+    /** 1/K */
+    alpha: number;
+    referenceTemperature: number;
+  };
   /** move boundary nodes onto the exact surface and use distorted-hex elements (default true); false = pure voxel staircase */
   fit?: boolean;
   /** CG relative residual tolerance (default 1e-7) */
@@ -95,6 +108,7 @@ interface ElementModel {
   Ke: Float64Array; // 24 x 24 condensed
   /** 9 x 24: incompatible mode amplitudes from nodal displacements (alpha = R u) */
   R: Float64Array;
+  KaaInv: Float64Array; // 9 x 9
   D: Float64Array; // 6 x 6
   /** Gauss-point matrices for stress recovery: B (6x24) and G (6x9) per point */
   B: Float64Array[];
@@ -275,84 +289,49 @@ function buildElement(hv: V3, E: number, nu: number): ElementModel {
       for (let k = 0; k < 9; k++) v += (KaaInv[i * 9 + k] as number) * (Kua[j * 9 + k] as number);
       R[i * 24 + j] = -v;
     }
-  return { Ke, R, D, B: Bs, G: Gs };
+  return { Ke, R, KaaInv, D, B: Bs, G: Gs };
 }
 
 // ---- voxelisation --------------------------------------------------------------------------------------------------
 
-function voxelise(shape: Shape3D, lo: V3, hv: V3, n: [number, number, number]) {
-  const [nx, ny, nz] = n;
-  const mesh = shape.mesh({
-    tolerance: Math.max(Math.min(...hv) * 0.02, 0.005),
-    angularTolerance: 0.1,
-  });
-  const p = mesh.vertices;
-  const cols: number[][] = Array.from({ length: nx * ny }, () => []);
-  // jitter the sample column slightly so rays never run exactly along a mesh edge
-  const jx = hv[0] * 1.3e-6;
-  const jy = hv[1] * 0.7e-6;
-  for (let t = 0; t < mesh.triangles.length; t += 3) {
-    const ia = (mesh.triangles[t] as number) * 3;
-    const ib = (mesh.triangles[t + 1] as number) * 3;
-    const ic = (mesh.triangles[t + 2] as number) * 3;
-    const ax = p[ia] as number;
-    const ay = p[ia + 1] as number;
-    const az = p[ia + 2] as number;
-    const bx = p[ib] as number;
-    const by = p[ib + 1] as number;
-    const bz = p[ib + 2] as number;
-    const cx = p[ic] as number;
-    const cy = p[ic + 1] as number;
-    const cz = p[ic + 2] as number;
-    const det = (by - cy) * (ax - cx) + (cx - bx) * (ay - cy);
-    if (Math.abs(det) < 1e-14) continue; // vertical triangle: contributes no crossings
-    const minx = Math.min(ax, bx, cx);
-    const maxx = Math.max(ax, bx, cx);
-    const miny = Math.min(ay, by, cy);
-    const maxy = Math.max(ay, by, cy);
-    const i0 = Math.max(0, Math.floor((minx - lo[0]) / hv[0] - 0.5));
-    const i1 = Math.min(nx - 1, Math.ceil((maxx - lo[0]) / hv[0] - 0.5));
-    const j0 = Math.max(0, Math.floor((miny - lo[1]) / hv[1] - 0.5));
-    const j1 = Math.min(ny - 1, Math.ceil((maxy - lo[1]) / hv[1] - 0.5));
-    for (let i = i0; i <= i1; i++) {
-      const x = lo[0] + (i + 0.5) * hv[0] + jx;
-      for (let j = j0; j <= j1; j++) {
-        const y = lo[1] + (j + 0.5) * hv[1] + jy;
-        const l1 = ((by - cy) * (x - cx) + (cx - bx) * (y - cy)) / det;
-        const l2 = ((cy - ay) * (x - cx) + (ax - cx) * (y - cy)) / det;
-        const l3 = 1 - l1 - l2;
-        if (l1 < 0 || l2 < 0 || l3 < 0) continue;
-        (cols[i + j * nx] as number[]).push(l1 * az + l2 * bz + l3 * cz);
-      }
-    }
-  }
-  const solid = new Uint8Array(nx * ny * nz);
-  let bad = 0;
-  for (let j = 0; j < ny; j++)
-    for (let i = 0; i < nx; i++) {
-      const zs = (cols[i + j * nx] as number[]).sort((a, b) => a - b);
-      if (zs.length % 2 === 1) {
-        bad++;
-        continue;
-      }
-      for (let k = 0; k < nz; k++) {
-        const zc = lo[2] + (k + 0.5) * hv[2];
-        let below = 0;
-        for (const z of zs) if (z < zc) below++;
-        if (below % 2 === 1) solid[i + nx * (j + ny * k)] = 1;
-      }
-    }
-  return { solid, badColumns: bad };
-}
-
-function selectNodes(
+/**
+ * Nodes picked by a region. Boxes and faces use the regular-grid coordinates; a cylinder uses the final (fitted) node
+ * coordinates, so the nodes snapped onto a bore or tube wall sit at its radius.
+ */
+export function selectNodes(
   region: SolidRegion,
   shape: Shape3D,
   nodeCoord: (idx: number) => V3,
   count: number,
   h: number,
   what: string,
+  fittedCoord?: (idx: number) => V3,
 ): number[] {
+  if (region.cylinder) {
+    const { axis, center, radius, range } = region.cylinder;
+    const ax = { X: 0, Y: 1, Z: 2 }[axis];
+    const o = [0, 1, 2].filter((d) => d !== ax) as [number, number];
+    const picked: number[] = [];
+    for (let i = 0; i < count; i++) {
+      const c = (fittedCoord ?? nodeCoord)(i);
+      const d = Math.hypot(
+        (c[o[0]] as number) - (center[o[0]] as number),
+        (c[o[1]] as number) - (center[o[1]] as number),
+      );
+      if (Math.abs(d - radius) > 0.5 * h) continue;
+      if (
+        range &&
+        ((c[ax] as number) < range[0] - 1e-9 * h || (c[ax] as number) > range[1] + 1e-9 * h)
+      )
+        continue;
+      picked.push(i);
+    }
+    if (picked.length === 0)
+      throw new Error(
+        `${what}: no solid nodes lie on that cylinder (check the axis, centre, radius and range against the body)`,
+      );
+    return picked;
+  }
   let min: V3;
   let max: V3;
   const tol = h * 0.51;
@@ -361,12 +340,13 @@ function selectNodes(
     max = region.box.max;
   } else if (region.face) {
     const f = findFace(shape, region.face.normal, region.face.near);
-    min = [f.min[0] - tol, f.min[1] - tol, f.min[2] - tol];
-    max = [f.max[0] + tol, f.max[1] + tol, f.max[2] + tol];
+    // the containment test below adds `tol` on every side once: the slab is the face plane +- tol, not +- 2 tol
+    min = [f.min[0], f.min[1], f.min[2]];
+    max = [f.max[0], f.max[1], f.max[2]];
     const axis = region.face.normal.endsWith('X') ? 0 : region.face.normal.endsWith('Y') ? 1 : 2;
-    min[axis] = f.level - tol;
-    max[axis] = f.level + tol;
-  } else throw new Error(`${what}: give a "box" or a "face" region`);
+    min[axis] = f.level;
+    max[axis] = f.level;
+  } else throw new Error(`${what}: give a "box", "face" or "cylinder" region`);
   const out: number[] = [];
   for (let i = 0; i < count; i++) {
     const c = nodeCoord(i);
@@ -394,281 +374,91 @@ export function solidFea(inp: SolidFeaInput): SolidFeaResult {
   if (!(inp.E > 0)) throw new Error('E must be positive');
   if (inp.supports.length === 0)
     throw new Error('Add at least one support, or the part can move freely');
-  const [bmin, bmax] = inp.shape.boundingBox.bounds as unknown as [number[], number[]];
-  const lo: V3 = [bmin[0] as number, bmin[1] as number, bmin[2] as number];
-  const hi: V3 = [bmax[0] as number, bmax[1] as number, bmax[2] as number];
-  const n: [number, number, number] = [
-    Math.max(1, Math.round((hi[0] - lo[0]) / h)),
-    Math.max(1, Math.round((hi[1] - lo[1]) / h)),
-    Math.max(1, Math.round((hi[2] - lo[2]) / h)),
-  ];
-  // the cell size differs slightly per axis so the grid spans the bounding box exactly (a 6 mm section stays 6 mm)
-  const hv: V3 = [(hi[0] - lo[0]) / n[0], (hi[1] - lo[1]) / n[1], (hi[2] - lo[2]) / n[2]];
-  const hmax = Math.max(...hv);
-  const [nx, ny, nz] = n;
   const maxEl = inp.maxElements ?? DEFAULT_MAX_ELEMENTS;
-  if (nx * ny * nz > maxEl * 4)
-    throw new Error(
-      `The bounding grid is ${nx} x ${ny} x ${nz} = ${nx * ny * nz} cells: use a larger elementSize (limit about ${maxEl} solid elements)`,
-    );
-
-  const { solid, badColumns } = voxelise(inp.shape, lo, hv, n);
-  const warnings: string[] = [];
-  if (badColumns > 0)
-    warnings.push(
-      `${badColumns} grid column(s) crossed the surface an odd number of times (open or non-manifold mesh); those columns were left empty`,
-    );
-
-  // active nodes
-  const nodeIndex = new Int32Array((nx + 1) * (ny + 1) * (nz + 1)).fill(-1);
-  const nid = (i: number, j: number, k: number) => i + (nx + 1) * (j + (ny + 1) * k);
-  let nElem = 0;
-  for (let k = 0; k < nz; k++)
-    for (let j = 0; j < ny; j++)
-      for (let i = 0; i < nx; i++) {
-        if (!solid[i + nx * (j + ny * k)]) continue;
-        nElem++;
-        for (const [sx, sy, sz] of SIGNS) {
-          const gi = nid(i + (sx > 0 ? 1 : 0), j + (sy > 0 ? 1 : 0), k + (sz > 0 ? 1 : 0));
-          if (nodeIndex[gi] === -1) nodeIndex[gi] = -2;
-        }
-      }
-  if (nElem === 0)
-    throw new Error('The grid captured no solid: the element size may be larger than the part');
-  if (nElem > maxEl)
-    throw new Error(
-      `${nElem} elements is more than the limit of ${maxEl}: use a larger elementSize`,
-    );
-  let nNodes = 0;
-  const nodeGrid: number[] = []; // active node -> grid id
-  for (let g = 0; g < nodeIndex.length; g++)
-    if (nodeIndex[g] === -2) {
-      nodeIndex[g] = nNodes++;
-      nodeGrid.push(g);
-    }
-  const coordOf = (a: number): V3 => {
-    const g = nodeGrid[a] as number;
-    const i = g % (nx + 1);
-    const j = Math.floor(g / (nx + 1)) % (ny + 1);
-    const k = Math.floor(g / ((nx + 1) * (ny + 1)));
-    return [lo[0] + i * hv[0], lo[1] + j * hv[1], lo[2] + k * hv[2]];
-  };
-  const conn = new Int32Array(nElem * 8);
-  const centers = new Float64Array(nElem * 3);
-  {
-    let e = 0;
-    for (let k = 0; k < nz; k++)
-      for (let j = 0; j < ny; j++)
-        for (let i = 0; i < nx; i++) {
-          if (!solid[i + nx * (j + ny * k)]) continue;
-          let a = 0;
-          for (const [sx, sy, sz] of SIGNS) {
-            conn[e * 8 + a] = nodeIndex[
-              nid(i + (sx > 0 ? 1 : 0), j + (sy > 0 ? 1 : 0), k + (sz > 0 ? 1 : 0))
-            ] as number;
-            a++;
-          }
-          centers[e * 3] = lo[0] + (i + 0.5) * hv[0];
-          centers[e * 3 + 1] = lo[1] + (j + 0.5) * hv[1];
-          centers[e * 3 + 2] = lo[2] + (k + 0.5) * hv[2];
-          e++;
-        }
-  }
+  let el: ReturnType<typeof buildElement> | undefined;
+  const mesh = buildSolidMesh(inp.shape, h, {
+    fit: inp.fit ?? true,
+    maxElements: maxEl,
+    keSize: 576,
+    element: (hv) => {
+      const built = buildElement(hv, inp.E, nu);
+      el = built;
+      return (xe) => {
+        const hb = buildHex(xe, built.D);
+        return { K: hb.Ke, volume: hb.volume };
+      };
+    },
+  });
+  if (!el) throw new Error('internal: no element model');
+  const elem = el as ReturnType<typeof buildElement>;
+  const {
+    hmax,
+    n,
+    nElem,
+    nNodes,
+    conn,
+    xyz,
+    centers,
+    evol,
+    distIdx,
+    distK: distKe,
+    snappedNodes,
+    relaxedNodes,
+    minJ,
+    coordOf,
+    gatherXe,
+    warnings,
+  } = mesh;
   const ndof = nNodes * 3;
-
-  // ---- body fitting: move boundary nodes onto the exact surface and build per-element matrices where needed ----
-  const el = buildElement(hv, inp.E, nu);
-  const fitOn = inp.fit ?? true;
-  const base = new Float64Array(nNodes * 3);
-  for (let a = 0; a < nNodes; a++) {
-    const c = coordOf(a);
-    base[a * 3] = c[0];
-    base[a * 3 + 1] = c[1];
-    base[a * 3 + 2] = c[2];
-  }
-  const xyz = Float64Array.from(base);
-  const brickVol = hv[0] * hv[1] * hv[2];
-  const evol = new Float64Array(nElem).fill(brickVol);
-  const distIdx = new Int32Array(nElem).fill(-1);
-  let distKe = new Float64Array(0);
-  let snappedNodes = 0;
-  let relaxedNodes = 0;
-  let minJ = 1;
-  const gatherXe = (e: number, out: Float64Array) => {
-    for (let a = 0; a < 8; a++) {
-      const nd = (conn[e * 8 + a] as number) * 3;
-      out[a * 3] = xyz[nd] as number;
-      out[a * 3 + 1] = xyz[nd + 1] as number;
-      out[a * 3 + 2] = xyz[nd + 2] as number;
-    }
-  };
-  if (fitOn) {
-    const bnd = new Uint8Array(nNodes);
-    {
-      let e = 0;
-      for (let k = 0; k < nz; k++)
-        for (let j = 0; j < ny; j++)
-          for (let i = 0; i < nx; i++) {
-            if (!solid[i + nx * (j + ny * k)]) continue;
-            for (let ax = 0; ax < 3; ax++)
-              for (const sg of [-1, 1]) {
-                const ni = i + (ax === 0 ? sg : 0);
-                const nj = j + (ax === 1 ? sg : 0);
-                const nk = k + (ax === 2 ? sg : 0);
-                const open =
-                  ni < 0 ||
-                  nj < 0 ||
-                  nk < 0 ||
-                  ni >= nx ||
-                  nj >= ny ||
-                  nk >= nz ||
-                  !solid[ni + nx * (nj + ny * nk)];
-                if (!open) continue;
-                for (let a = 0; a < 8; a++)
-                  if ((SIGNS[a] as [number, number, number])[ax] === sg)
-                    bnd[conn[e * 8 + a] as number] = 1;
-              }
-            e++;
-          }
-    }
-    const mesh = inp.shape.mesh({
-      tolerance: Math.max(Math.min(...hv) * 0.02, 0.005),
-      angularTolerance: 0.1,
-    });
-    const index = indexSurface(mesh.vertices, mesh.triangles, lo, 2 * hmax);
-    const target = Float64Array.from(base);
-    const alpha = new Float64Array(nNodes);
-    let farSkipped = 0;
-    for (let a = 0; a < nNodes; a++) {
-      if (!bnd[a]) continue;
-      const q = index.nearest([
-        base[a * 3] as number,
-        base[a * 3 + 1] as number,
-        base[a * 3 + 2] as number,
-      ]);
-      if (!q || q.dist < 1e-9 * hmax) continue;
-      if (q.dist > 0.95 * hmax) {
-        farSkipped++;
-        continue;
-      }
-      target[a * 3] = q.point[0];
-      target[a * 3 + 1] = q.point[1];
-      target[a * 3 + 2] = q.point[2];
-      alpha[a] = 1;
-    }
-    const place = () => {
-      for (let a = 0; a < nNodes; a++)
-        for (let d = 0; d < 3; d++)
-          xyz[a * 3 + d] =
-            (base[a * 3 + d] as number) +
-            (alpha[a] as number) * ((target[a * 3 + d] as number) - (base[a * 3 + d] as number));
-    };
-    const ref = brickVol / 8;
-    const xe = new Float64Array(24);
-    for (let round = 0; round < 24; round++) {
-      place();
-      let bad = 0;
-      for (let e = 0; e < nElem; e++) {
-        gatherXe(e, xe);
-        if (minCornerJacobian(xe, ref) < 0.1) {
-          bad++;
-          for (let a = 0; a < 8; a++) {
-            const nd = conn[e * 8 + a] as number;
-            if ((alpha[nd] as number) > 0)
-              alpha[nd] = (alpha[nd] as number) < 0.1 ? 0 : (alpha[nd] as number) * 0.5;
-          }
-        }
-      }
-      if (bad === 0) break;
-    }
-    place();
-    for (let a = 0; a < nNodes; a++) {
-      const moved = Math.hypot(
-        (xyz[a * 3] as number) - (base[a * 3] as number),
-        (xyz[a * 3 + 1] as number) - (base[a * 3 + 1] as number),
-        (xyz[a * 3 + 2] as number) - (base[a * 3 + 2] as number),
-      );
-      if (moved > 1e-9 * hmax) snappedNodes++;
-      const wanted = Math.hypot(
-        (target[a * 3] as number) - (base[a * 3] as number),
-        (target[a * 3 + 1] as number) - (base[a * 3 + 1] as number),
-        (target[a * 3 + 2] as number) - (base[a * 3 + 2] as number),
-      );
-      if (wanted > 1e-9 * hmax && moved < wanted * 0.999) relaxedNodes++;
-    }
-    if (farSkipped > 0)
-      warnings.push(
-        `${farSkipped} boundary node(s) were more than 0.95 element sizes from the surface (thin or sharp features) and were left in place`,
-      );
-    // element matrices for every element that has a moved node
-    let nd = 0;
-    const flagged: number[] = [];
-    for (let e = 0; e < nElem; e++) {
-      let any = false;
-      for (let a = 0; a < 8 && !any; a++) {
-        const node = (conn[e * 8 + a] as number) * 3;
-        for (let d = 0; d < 3; d++)
-          if (Math.abs((xyz[node + d] as number) - (base[node + d] as number)) > 1e-12) any = true;
-      }
-      if (any) {
-        distIdx[e] = nd++;
-        flagged.push(e);
-      }
-    }
-    distKe = new Float64Array(nd * 576);
-    minJ = Number.POSITIVE_INFINITY;
-    for (const e of flagged) {
-      gatherXe(e, xe);
-      minJ = Math.min(minJ, minCornerJacobian(xe, ref));
-      let hb: ReturnType<typeof buildHex>;
-      try {
-        hb = buildHex(xe, el.D);
-      } catch {
-        throw new Error(
-          'The fitted mesh has an inverted element: use a smaller elementSize or set fit to false',
-        );
-      }
-      distKe.set(hb.Ke, (distIdx[e] as number) * 576);
-      evol[e] = hb.volume;
-    }
-    if (!Number.isFinite(minJ)) minJ = 1;
-    if (minJ < 0.15)
-      warnings.push(
-        `Some fitted elements are strongly distorted (worst corner Jacobian ratio ${Math.round(minJ * 100) / 100}): refine the grid there for reliable stress`,
-      );
-  }
-  // element centres from the final node positions
-  for (let e = 0; e < nElem; e++) {
-    let sx = 0;
-    let sy = 0;
-    let sz = 0;
-    for (let a = 0; a < 8; a++) {
-      const nd2 = (conn[e * 8 + a] as number) * 3;
-      sx += xyz[nd2] as number;
-      sy += xyz[nd2 + 1] as number;
-      sz += xyz[nd2 + 2] as number;
-    }
-    centers[e * 3] = sx / 8;
-    centers[e * 3 + 1] = sy / 8;
-    centers[e * 3 + 2] = sz / 8;
-  }
   let voxelVolume = 0;
   for (let e = 0; e < nElem; e++) voxelVolume += evol[e] as number;
+  const fitOn = inp.fit ?? true;
 
   // boundary conditions
   const fixed = new Uint8Array(ndof);
   for (const s of inp.supports) {
-    const nodes = selectNodes(s.region, inp.shape, coordOf, nNodes, hmax, 'support');
+    const nodes = selectNodes(s.region, inp.shape, coordOf, nNodes, hmax, 'support', (a) => [
+      xyz[a * 3] as number,
+      xyz[a * 3 + 1] as number,
+      xyz[a * 3 + 2] as number,
+    ]);
     const axes = s.dofs ?? ['x', 'y', 'z'];
     for (const a of nodes) for (const ax of axes) fixed[a * 3 + { x: 0, y: 1, z: 2 }[ax]] = 1;
   }
   const f = new Float64Array(ndof);
   const applied: V3 = [0, 0, 0];
   for (const l of inp.loads ?? []) {
-    const nodes = selectNodes(l.region, inp.shape, coordOf, nNodes, hmax, 'load');
-    for (const a of nodes)
-      for (let d = 0; d < 3; d++)
-        f[a * 3 + d] = (f[a * 3 + d] as number) + (l.force[d] as number) / nodes.length;
+    const nodes = selectNodes(l.region, inp.shape, coordOf, nNodes, hmax, 'load', (a) => [
+      xyz[a * 3] as number,
+      xyz[a * 3 + 1] as number,
+      xyz[a * 3 + 2] as number,
+    ]);
+    // A surface load is spread by tributary face area (corner 1/4 of a cell, edge 1/2, interior 1): the consistent
+    // nodal forces of a uniform traction. Equal shares per node would overload corners and skew the end displacement.
+    const sel = new Uint8Array(nNodes);
+    for (const a of nodes) sel[a] = 1;
+    const faces: { c: number[]; area: number }[] = [];
+    let totalArea = 0;
+    for (const code of mesh.boundaryFaces) {
+      const c = faceCorners(mesh, code);
+      if (c.every((x) => sel[x])) {
+        const area = faceArea(mesh, c);
+        faces.push({ c, area });
+        totalArea += area;
+      }
+    }
+    if (faces.length > 0 && totalArea > 0) {
+      for (const fc of faces)
+        for (const c of fc.c)
+          for (let d = 0; d < 3; d++)
+            f[c * 3 + d] =
+              (f[c * 3 + d] as number) + ((l.force[d] as number) * fc.area) / totalArea / 4;
+    } else {
+      // a region that covers no whole exposed face (a box through the interior, say): share equally between its nodes
+      for (const a of nodes)
+        for (let d = 0; d < 3; d++)
+          f[a * 3 + d] = (f[a * 3 + d] as number) + (l.force[d] as number) / nodes.length;
+    }
     for (let d = 0; d < 3; d++) applied[d] = (applied[d] as number) + (l.force[d] as number);
   }
   if (inp.gravity) {
@@ -682,9 +472,78 @@ export function solidFea(inp: SolidFeaInput): SolidFeaResult {
       applied[2] -= w;
     }
   }
-  if (!f.some((v) => v !== 0)) throw new Error('No loads: add a load or turn on gravity');
+  // thermal stress: equivalent nodal loads of the thermal strain, condensed onto the incompatible modes
+  const brickXeRef = new Float64Array(24);
+  HEX_SIGNS.forEach((sg, a) => {
+    brickXeRef[a * 3] = (sg[0] * mesh.hv[0]) / 2;
+    brickXeRef[a * 3 + 1] = (sg[1] * mesh.hv[1]) / 2;
+    brickXeRef[a * 3 + 2] = (sg[2] * mesh.hv[2]) / 2;
+  });
+  const th = inp.thermal;
+  const thermalGp: Float64Array[] = []; // per element: 8 temperature-rise values at the Gauss points
+  const sigmaTh = (dT: number) => (inp.E * (th?.alpha ?? 0) * dT) / (1 - 2 * nu);
+  if (th) {
+    if (th.temperatures.length !== nNodes)
+      throw new Error(
+        'thermal.temperatures does not match this mesh: solve the heat conduction with the same body, elementSize, fit and maxElements',
+      );
+    const brickXe = new Float64Array(24);
+    HEX_SIGNS.forEach((sg, a) => {
+      brickXe[a * 3] = (sg[0] * mesh.hv[0]) / 2;
+      brickXe[a * 3 + 1] = (sg[1] * mesh.hv[1]) / 2;
+      brickXe[a * 3 + 2] = (sg[2] * mesh.hv[2]) / 2;
+    });
+    const brickG = hexGaussGradients(brickXe);
+    const xeL = new Float64Array(24);
+    const fu = new Float64Array(24);
+    const fa = new Float64Array(9);
+    for (let e = 0; e < nElem; e++) {
+      const dist = (distIdx[e] as number) >= 0;
+      let hb: ReturnType<typeof buildHex> | undefined;
+      let gg = brickG;
+      if (dist) {
+        gatherXe(e, xeL);
+        hb = buildHex(xeL, elem.D);
+        gg = hexGaussGradients(xeL);
+      }
+      const Rm = hb ? hb.R : elem.R;
+      const Bm = hb ? hb.B : elem.B;
+      const Gm = hb ? hb.G : elem.G;
+      fu.fill(0);
+      fa.fill(0);
+      const tg = new Float64Array(8);
+      for (let gp = 0; gp < 8; gp++) {
+        const g = gg[gp] as (typeof gg)[number];
+        let t = 0;
+        for (let a = 0; a < 8; a++)
+          t += (g.N[a] as number) * (th.temperatures[conn[e * 8 + a] as number] as number);
+        const dT = t - th.referenceTemperature;
+        tg[gp] = dT;
+        const s = sigmaTh(dT) * g.det;
+        const B = Bm[gp] as Float64Array;
+        const G = Gm[gp] as Float64Array;
+        for (let j = 0; j < 24; j++)
+          fu[j] =
+            (fu[j] as number) +
+            s * ((B[j] as number) + (B[24 + j] as number) + (B[48 + j] as number));
+        for (let c = 0; c < 9; c++)
+          fa[c] =
+            (fa[c] as number) +
+            s * ((G[c] as number) + (G[9 + c] as number) + (G[18 + c] as number));
+      }
+      thermalGp.push(tg);
+      for (let j = 0; j < 24; j++) {
+        let v = fu[j] as number;
+        for (let c = 0; c < 9; c++) v += (Rm[c * 24 + j] as number) * (fa[c] as number);
+        const node = conn[e * 8 + ((j / 3) | 0)] as number;
+        f[node * 3 + (j % 3)] = (f[node * 3 + (j % 3)] as number) + v;
+      }
+    }
+  }
+  if (!f.some((v) => v !== 0))
+    throw new Error('No loads: add a load, turn on gravity, or give a thermal field');
 
-  const Ke = el.Ke;
+  const Ke = elem.Ke;
 
   // operator and Jacobi preconditioner
   const diag = new Float64Array(ndof);
@@ -818,14 +677,34 @@ export function solidFea(inp: SolidFeaInput): SolidFeaResult {
       ue[a * 3 + 1] = u[node + 1] as number;
       ue[a * 3 + 2] = u[node + 2] as number;
     }
-    const hbE = (distIdx[e] as number) >= 0 ? buildHex(gatherInto(e), el.D) : undefined;
-    const Rm = hbE ? hbE.R : el.R;
-    const Bm = hbE ? hbE.B : el.B;
-    const Gm = hbE ? hbE.G : el.G;
+    const hbE = (distIdx[e] as number) >= 0 ? buildHex(gatherInto(e), elem.D) : undefined;
+    const Rm = hbE ? hbE.R : elem.R;
+    const Bm = hbE ? hbE.B : elem.B;
+    const Gm = hbE ? hbE.G : elem.G;
     for (let i = 0; i < 9; i++) {
       let v = 0;
       for (let c = 0; c < 24; c++) v += (Rm[i * 24 + c] as number) * (ue[c] as number);
       alpha9[i] = v;
+    }
+    if (th) {
+      // under a thermal load the incompatible amplitudes also carry alpha += Kaa^-1 f_a
+      const KI = hbE ? hbE.KaaInv : elem.KaaInv;
+      const faE = new Float64Array(9);
+      const ggE = hexGaussGradients(distIdx[e] !== -1 ? gatherInto(e) : brickXeRef);
+      for (let gp = 0; gp < 8; gp++) {
+        const s =
+          sigmaTh((thermalGp[e] as Float64Array)[gp] as number) * (ggE[gp] as { det: number }).det;
+        const G = Gm[gp] as Float64Array;
+        for (let c = 0; c < 9; c++)
+          faE[c] =
+            (faE[c] as number) +
+            s * ((G[c] as number) + (G[9 + c] as number) + (G[18 + c] as number));
+      }
+      for (let i = 0; i < 9; i++) {
+        let v = 0;
+        for (let c = 0; c < 9; c++) v += (KI[i * 9 + c] as number) * (faE[c] as number);
+        alpha9[i] = (alpha9[i] as number) + v;
+      }
     }
     let sum = 0;
     for (let gp = 0; gp < 8; gp++) {
@@ -837,9 +716,15 @@ export function solidFea(inp: SolidFeaInput): SolidFeaResult {
         for (let c = 0; c < 9; c++) v += (G[i * 9 + c] as number) * (alpha9[c] as number);
         eps[i] = v;
       }
+      if (th) {
+        const eth = th.alpha * ((thermalGp[e] as Float64Array)[gp] as number);
+        eps[0] = (eps[0] as number) - eth;
+        eps[1] = (eps[1] as number) - eth;
+        eps[2] = (eps[2] as number) - eth;
+      }
       for (let i = 0; i < 6; i++) {
         let v = 0;
-        for (let c = 0; c < 6; c++) v += (el.D[i * 6 + c] as number) * (eps[c] as number);
+        for (let c = 0; c < 6; c++) v += (elem.D[i * 6 + c] as number) * (eps[c] as number);
         sig[i] = v;
       }
       sigGp.set(sig, gp * 6);

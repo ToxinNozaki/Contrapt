@@ -16,7 +16,7 @@ add a file, open a pull request.
    ```
 3. Write for an AI that has to *act*: formulas with units, typical values with ranges, rules of thumb flagged as such,
    worked examples with real arithmetic, checklists, and "what to tell the user".
-4. Be honest. Mark typical values as typical. Never imply Contrapt does something it does not (no thermal, fatigue, buckling or dynamics yet; frame FEA and approximate voxel solid FEA exist).
+4. Be honest. Mark typical values as typical. Never imply Contrapt does something it does not (no transient thermal, fluids, fatigue or multi-body dynamics yet; frame FEA, solid FEA and steady-state thermal analysis exist).
    Say when a qualified engineer must review something.
 5. Check every number and formula against a reputable source and work the example yourself. A confident wrong
    number is worse than no number.

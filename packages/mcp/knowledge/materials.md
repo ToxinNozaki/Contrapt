@@ -30,9 +30,34 @@ tensile strength where plastics do not yield cleanly), ρ = density.
 | Hardwood (oak/maple) | ~11–13 along grain | varies | 0.6–0.75 | Strong along the grain, weak across; moves with humidity |
 
 ## Thermal expansion (per °C, × 10⁻⁶)
-Steel ~12; stainless ~17; aluminium ~23; brass ~19; PLA ~68; ABS ~90; nylon ~80. A 300 mm aluminium part
+Steel ~12; stainless ~17; aluminium ~23; brass ~20; PLA ~68; ABS ~90; nylon ~80. A 300 mm aluminium part
 grows about 0.14 mm over a 20 °C change; plastics several times more. Mixing plastics with metals in tight fits
 needs clearance or slots.
+
+## Thermal properties (typical, used by thermal_analysis)
+| Material | k (W/m·K) | α (× 10⁻⁶ /K) |
+|---|---|---|
+| Aluminium 6061-T6 | 167 | 23.6 |
+| Aluminium 7075-T6 | 130 | 23.4 |
+| Mild steel (A36 / 1018) | 50 | 12 |
+| Stainless 304 | 16 | 17.3 |
+| Alloy steel 4140 | 42 | 12.3 |
+| Brass (C360) | 115 | 20.5 |
+| Copper | 390 | 17 |
+| Titanium Ti-6Al-4V | 6.7 | 8.6 |
+| PLA (printed) | 0.13 | 68 |
+| PETG (printed) | 0.2 | 60 |
+| ABS / ASA (printed) | 0.17 | 90 |
+| Nylon PA12/PA6 | 0.25 | 80 |
+| Polycarbonate | 0.2 | 65 |
+| Acrylic (PMMA) | 0.19 | 70 |
+| Acetal / Delrin (POM) | 0.31 | 110 |
+| Birch plywood | 0.13 | varies |
+| Hardwood (oak/maple) | 0.17 | varies |
+
+Values are typical handbook numbers: plastics vary with grade, filler and print settings, and wood expansion depends on the
+grain direction, so no single number is given. Use the supplier datasheet for anything that matters. Metals conduct tens to
+hundreds of times better than plastics, which is why a heat sink must be metal and a handle should not be.
 
 ## Choosing a material
 - **Stiffness per weight** (E/ρ) is nearly the same for steel, aluminium and titanium; shape matters more

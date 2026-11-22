@@ -433,3 +433,88 @@ test('frame_buckling: a pinned aluminium strut buckles at the Euler load, and te
   assert.match(t.verdict, /nothing to buckle/);
   assert.deepEqual(t.load_factors, []);
 });
+
+test('thermal_analysis: an aluminium fin matches the closed-form tip temperature, the heat balance closes, and thermal stress follows', async () => {
+  await call('new_model', { name: 'fin' });
+  await call('add_step', { step: { op: 'box', id: 'fin', w: 50, d: 5, h: 5, at: [25, 0, 0] } });
+  await call('add_step', { step: { op: 'material', target: 'fin', name: '6061-T6' } });
+  const sides = ['+Y', '-Y', '+Z', '-Z'].map((n) => ({
+    region: { face: { normal: n } },
+    h_w_m2k: 100,
+    ambient_c: 20,
+  }));
+  const args = {
+    body: 'fin',
+    element_size_mm: 1,
+    fixed_temperatures: [{ region: { face: { normal: '-X' } }, temperature_c: 100 }],
+    convections: sides,
+  };
+  const r = json(await call('thermal_analysis', args));
+  const k = 167; // 6061-T6 in the library
+  const m = Math.sqrt((100e-6 * 20) / ((k / 1000) * 25));
+  const tip = 20 + 80 / Math.cosh(m * 50);
+  assert.ok(
+    Math.abs(r.temperature_c.min - tip) < 0.012 * tip,
+    `tip ${r.temperature_c.min} vs ${tip}`,
+  );
+  assert.equal(r.temperature_c.max, 100);
+  assert.ok(Math.abs(r.heat_w.imbalance) < 1e-6);
+  assert.match(r.verdict, /heat balance closes/);
+  const Q = (k / 1000) * 25 * m * 80 * Math.tanh(m * 50);
+  assert.ok(Math.abs(r.heat_w.in_through_fixed_temperature_surfaces - Q) < 0.02 * Q);
+  assert.equal(r.material.conductivity_w_mk, 167);
+  assert.equal(r.thermal_stress, undefined);
+
+  // thermal stress on the same mesh: clamp the root completely, so the swelling root is restrained
+  const s = json(
+    await call('thermal_analysis', {
+      ...args,
+      stress: { supports: [{ region: { face: { normal: '-X' } } }], reference_temperature_c: 20 },
+    }),
+  );
+  assert.ok(s.thermal_stress.von_mises_MPa.peak > 1, 'a clamped, heated root carries stress');
+  assert.ok(s.thermal_stress.safety_factor_p99 > 0);
+  assert.equal(s.thermal_stress.converged, true);
+  assert.ok(s.thermal_stress.max_displacement.mm > 0.01, 'the free end grows');
+  assert.ok(s.thermal_stress.equilibrium_error_N < 1e-2);
+});
+
+test('thermal_analysis fails clearly: no material, no conductivity, no driver, bad regions', async () => {
+  await call('new_model', { name: 'errs' });
+  await call('add_step', { step: { op: 'box', id: 'p', w: 20, d: 10, h: 10, at: [10, 0, 0] } });
+  const base = {
+    body: 'p',
+    fixed_temperatures: [{ region: { face: { normal: '-X' } }, temperature_c: 50 }],
+    convections: [{ region: { face: { normal: '+X' } }, h_w_m2k: 10, ambient_c: 20 }],
+  };
+  assert.match(text(await call('thermal_analysis', base)), /no material/);
+  assert.match(
+    text(await call('thermal_analysis', { ...base, material: 'TPU' })),
+    /no thermal conductivity/,
+  );
+  assert.match(
+    text(await call('thermal_analysis', { body: 'zz', material: 'PLA' })),
+    /No body "zz"/,
+  );
+  assert.match(
+    text(await call('thermal_analysis', { body: 'p', material: 'copper' })),
+    /at least one fixed-temperature surface or a convection surface/,
+  );
+  assert.match(
+    text(
+      await call('thermal_analysis', {
+        ...base,
+        material: 'brass',
+        convections: [
+          { region: { box: { min: [5, -1, -1], max: [6, 1, 1] } }, h_w_m2k: 10, ambient_c: 20 },
+        ],
+      }),
+    ),
+    /no exposed surface faces lie in that region/,
+  );
+  const ok = json(
+    await call('thermal_analysis', { ...base, material: 'copper', element_size_mm: 2.5 }),
+  );
+  assert.ok(ok.temperature_c.max <= 50 + 1e-9);
+  assert.ok(ok.temperature_c.min >= 20 - 1e-9);
+});

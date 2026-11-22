@@ -186,3 +186,45 @@ test('the optimiser drives a real FEA requirement: the thinnest arm whose frame 
   assert.ok(res.best.value >= exact - 1e-9, `${res.best.value} below the true limit ${exact}`);
   assert.ok(res.best.value - exact < 0.02, `${res.best.value} vs ${exact}`);
 });
+
+test('a thermal spec keeps a heated part under its limit: an aluminium heat spreader versus the same part in PLA', async () => {
+  const mk = async (material: 'copper' | 'PLA') => {
+    const b = new ModelBuilder('plate');
+    b.add({ op: 'box', id: 'plate', w: 40, d: 40, h: 4 });
+    b.add({ op: 'material', target: 'plate', name: material });
+    return build(b);
+  };
+  const spec = (maxTemperatureC: number): Spec => ({
+    id: 'chip-temp',
+    kind: 'thermal',
+    body: 'plate',
+    elementSizeMm: 2,
+    heatInputs: [{ region: { face: { normal: '+Z' } }, powerW: 5 }],
+    convections: [{ region: { face: { normal: '-Z' } }, hWm2K: 10, ambientC: 25 }],
+    maxTemperatureC,
+  });
+  // 5 W through 10 W/(m2 K) over 1600 mm2: the whole plate sits near 25 + 5 / (10 x 1.6e-3) = 337 C when it spreads the heat
+  const cu = evaluateSpec(await mk('copper'), spec(400));
+  assert.equal(cu.ok, true, cu.summary);
+  assert.equal(cu.fea, true);
+  assert.match(cu.summary, /hottest point 33\d\.\d+ C/);
+  assert.equal(evaluateSpec(await mk('copper'), spec(300)).ok, false);
+  // PLA barely conducts, so the heated face runs far hotter than the cooled one
+  const pla = evaluateSpec(await mk('PLA'), spec(400));
+  assert.equal(pla.ok, false);
+  assert.match(pla.summary, /EXCEEDS max 400/);
+  // live evaluation skips it as pending, like the other FEA specs
+  const live = evaluateSpecs(await mk('copper'), [spec(400)], { live: true });
+  assert.equal(live.pending, 1);
+  // errors say what to fix
+  const raw = new ModelBuilder('raw');
+  raw.add({ op: 'box', id: 'plate', w: 40, d: 40, h: 4 });
+  assert.match(
+    evaluateSpec(await build(raw), spec(400)).summary,
+    /no material: add a material step/,
+  );
+  assert.match(
+    evaluateSpec(await mk('copper'), { ...spec(400), maxTemperatureC: undefined } as Spec).summary,
+    /needs maxTemperatureC and\/or minTemperatureC/,
+  );
+});
