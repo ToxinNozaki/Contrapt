@@ -213,7 +213,7 @@ export const feaTools: ToolDef[] = [
   {
     name: 'solid_fea',
     description:
-      'Static stress and displacement analysis of a SOLID body (3D linear elasticity on a voxel grid of 8-node hexahedra with incompatible modes; matrix-free CG solver). Give supports (a face or box held fixed; optional dofs x/y/z), loads (a face or box + total force in N), optional gravity, and a library material. Returns max displacement, max and 99th-percentile von Mises stress with locations, safety factors vs yield, reactions, equilibrium check, grid quality (volume ratio) and solver convergence. Stair-stepped boundaries make stresses at holes, fillets and corners approximate and mesh-dependent: displacements are reliable, peak stress is a guide; refine with element_size_mm and compare. Validated against beam theory and the frame solver. Typical runs take seconds; keep the grid under about 40k elements.',
+      'Static stress and displacement analysis of a SOLID body (3D linear elasticity: a regular grid of 8-node hexahedra with incompatible modes whose boundary nodes are snapped onto the exact surface, so curved boundaries are represented as curved; nodal stress recovery; matrix-free CG solver). Give supports (a face or box held fixed; optional dofs x/y/z), loads (a face or box + total force in N), optional gravity, and a library material. Returns max displacement, max and 99th-percentile von Mises stress with locations, safety factors vs yield, reactions, equilibrium check, grid quality (volume ratio) and solver convergence. Validated against beam theory, the frame solver and the handbook stress-concentration factor of a plate with a hole (within about 1% at 5 elements per hole radius, 8% at 2.5). Peak stress at sharp re-entrant corners and under point loads or fixed faces is still mesh-dependent and singular: read the 99th percentile, refine with element_size_mm and compare. Typical runs take seconds; keep the grid under about 40k elements.',
     input: {
       body: z.string(),
       material: z.enum(MATERIAL_NAMES),
@@ -224,6 +224,12 @@ export const feaTools: ToolDef[] = [
         .array(z.object({ region: Region, force: Vec3.describe('total force on the region, N') }))
         .optional(),
       gravity: z.boolean().optional().describe('add self weight (down, -Z)'),
+      fit: z
+        .boolean()
+        .optional()
+        .describe(
+          'snap boundary nodes onto the true surface (default true); false = plain voxel staircase',
+        ),
       element_size_mm: z
         .number()
         .positive()
@@ -261,6 +267,7 @@ export const feaTools: ToolDef[] = [
         supports: a.supports as never,
         loads: a.loads as never,
         gravity: a.gravity as boolean | undefined,
+        fit: a.fit as boolean | undefined,
       });
       const warn = [...r.warnings];
       if (Math.abs(r.volumeRatio - 1) > 0.05)
@@ -286,6 +293,7 @@ export const feaTools: ToolDef[] = [
         von_mises_MPa: {
           peak: round(r.maxVonMises.value, 3),
           peak_at_mm: roundAll(r.maxVonMises.at, 2),
+          peak_element_average: round(r.peakElementVonMises, 3),
           p99: round(r.p99VonMises, 3),
           median: round(r.medianVonMises, 3),
           yield: mat.yieldMPa,
@@ -303,6 +311,10 @@ export const feaTools: ToolDef[] = [
           nodes: r.nodes,
           grid: r.grid,
           volume_ratio: round(r.volumeRatio, 4),
+          fitted: r.fitted,
+          snapped_nodes: r.snappedNodes,
+          relaxed_nodes: r.relaxedNodes,
+          min_jacobian_ratio: round(r.minJacobianRatio, 3),
         },
         solver: {
           converged: r.converged,
@@ -312,7 +324,7 @@ export const feaTools: ToolDef[] = [
         },
         ...(warn.length ? { warnings: warn } : {}),
         notes: [
-          'Linear elastic, small deflection, perfect bonding, supports and loads as chosen. Voxel (stair-stepped) boundaries: stresses at curved surfaces, holes, fillets and sharp corners are approximate; fixed faces and point loads create artificial stress spikes (the 99th percentile ignores single-element spikes). Displacements converge faster than stresses: halve element_size_mm and compare before trusting a peak. No fatigue, buckling, contact or plasticity. An estimate for sizing, not a certification.',
+          'Linear elastic, small deflection, perfect bonding, supports and loads as chosen. The mesh is a fitted structured hex grid: curved boundaries are well represented from about 4 elements per radius, sharp corners and thin features (under 2 elements) are not. Fixed faces and point loads create artificial stress spikes (the 99th percentile ignores single-element spikes). Halve element_size_mm and compare before trusting a peak. No fatigue, buckling, contact or plasticity. An estimate for sizing, not a certification.',
         ],
       });
     },

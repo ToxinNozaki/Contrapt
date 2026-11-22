@@ -1,12 +1,14 @@
 // Voxel-based linear-elastic solid FEA: the body is filled with a regular grid of cubic 8-node hexahedra that use
 // Wilson-Taylor incompatible modes (so bending does not lock), solved matrix-free by preconditioned conjugate gradients.
 //
-// Honest scope: boundaries are stair-stepped, so stresses at curved surfaces, holes, fillets and re-entrant corners are
-// approximate and mesh-dependent (peak stresses at singular corners keep growing as the grid is refined). Displacements
-// converge well; use the p99 stress, refine and compare. Not a substitute for a body-fitted mesh or a certification.
+// With `fit` (default) the boundary nodes are snapped onto the exact surface and the distorted hexahedra get their own
+// matrices (solidfit.ts), so curved boundaries are curved; stress is recovered at the nodes. Honest scope: it is still a
+// structured grid, so sharp corners and features thinner than about two elements are not captured, peak stress at
+// singular corners and under point loads keeps growing with refinement (read p99, refine, compare). Not a certification.
 import { measureVolume, type Shape3D } from 'replicad';
 import { type FaceNormal, findFace } from './faces.ts';
 import type { V3 } from './path.ts';
+import { buildHex, indexSurface, minCornerJacobian } from './solidfit.ts';
 
 export interface SolidRegion {
   /** a world-space box; nodes inside it (within half an element) are selected */
@@ -39,6 +41,8 @@ export interface SolidFeaInput {
   /** add self weight acting along -Z */
   gravity?: boolean;
   maxElements?: number;
+  /** move boundary nodes onto the exact surface and use distorted-hex elements (default true); false = pure voxel staircase */
+  fit?: boolean;
   /** CG relative residual tolerance (default 1e-7) */
   tolerance?: number;
   maxIterations?: number;
@@ -52,6 +56,13 @@ export interface SolidFeaResult {
   grid: [number, number, number];
   /** voxel volume over true volume: how well the grid represents the shape (1 = exact) */
   volumeRatio: number;
+  /** the mesh was fitted to the surface (curved boundaries represented as curved) */
+  fitted: boolean;
+  snappedNodes: number;
+  /** nodes whose move was shortened to keep elements valid */
+  relaxedNodes: number;
+  /** worst corner Jacobian relative to an undistorted brick (1 = perfect, <0.1 is poor) */
+  minJacobianRatio: number;
   iterations: number;
   converged: boolean;
   relativeResidual: number;
@@ -59,6 +70,8 @@ export interface SolidFeaResult {
   maxVonMises: { value: number; at: V3 };
   /** 99th percentile of element von Mises: robust against single-element corner spikes */
   p99VonMises: number;
+  /** largest element-average von Mises (smoother than the nodal peak; Gauss points sit inside the element) */
+  peakElementVonMises: number;
   medianVonMises: number;
   safetyFactorPeak?: number;
   safetyFactorP99?: number;
@@ -463,7 +476,184 @@ export function solidFea(inp: SolidFeaInput): SolidFeaResult {
   }
   const ndof = nNodes * 3;
 
-  const voxelVolume = nElem * hv[0] * hv[1] * hv[2];
+  // ---- body fitting: move boundary nodes onto the exact surface and build per-element matrices where needed ----
+  const el = buildElement(hv, inp.E, nu);
+  const fitOn = inp.fit ?? true;
+  const base = new Float64Array(nNodes * 3);
+  for (let a = 0; a < nNodes; a++) {
+    const c = coordOf(a);
+    base[a * 3] = c[0];
+    base[a * 3 + 1] = c[1];
+    base[a * 3 + 2] = c[2];
+  }
+  const xyz = Float64Array.from(base);
+  const brickVol = hv[0] * hv[1] * hv[2];
+  const evol = new Float64Array(nElem).fill(brickVol);
+  const distIdx = new Int32Array(nElem).fill(-1);
+  let distKe = new Float64Array(0);
+  let snappedNodes = 0;
+  let relaxedNodes = 0;
+  let minJ = 1;
+  const gatherXe = (e: number, out: Float64Array) => {
+    for (let a = 0; a < 8; a++) {
+      const nd = (conn[e * 8 + a] as number) * 3;
+      out[a * 3] = xyz[nd] as number;
+      out[a * 3 + 1] = xyz[nd + 1] as number;
+      out[a * 3 + 2] = xyz[nd + 2] as number;
+    }
+  };
+  if (fitOn) {
+    const bnd = new Uint8Array(nNodes);
+    {
+      let e = 0;
+      for (let k = 0; k < nz; k++)
+        for (let j = 0; j < ny; j++)
+          for (let i = 0; i < nx; i++) {
+            if (!solid[i + nx * (j + ny * k)]) continue;
+            for (let ax = 0; ax < 3; ax++)
+              for (const sg of [-1, 1]) {
+                const ni = i + (ax === 0 ? sg : 0);
+                const nj = j + (ax === 1 ? sg : 0);
+                const nk = k + (ax === 2 ? sg : 0);
+                const open =
+                  ni < 0 ||
+                  nj < 0 ||
+                  nk < 0 ||
+                  ni >= nx ||
+                  nj >= ny ||
+                  nk >= nz ||
+                  !solid[ni + nx * (nj + ny * nk)];
+                if (!open) continue;
+                for (let a = 0; a < 8; a++)
+                  if ((SIGNS[a] as [number, number, number])[ax] === sg)
+                    bnd[conn[e * 8 + a] as number] = 1;
+              }
+            e++;
+          }
+    }
+    const mesh = inp.shape.mesh({
+      tolerance: Math.max(Math.min(...hv) * 0.02, 0.005),
+      angularTolerance: 0.1,
+    });
+    const index = indexSurface(mesh.vertices, mesh.triangles, lo, 2 * hmax);
+    const target = Float64Array.from(base);
+    const alpha = new Float64Array(nNodes);
+    let farSkipped = 0;
+    for (let a = 0; a < nNodes; a++) {
+      if (!bnd[a]) continue;
+      const q = index.nearest([
+        base[a * 3] as number,
+        base[a * 3 + 1] as number,
+        base[a * 3 + 2] as number,
+      ]);
+      if (!q || q.dist < 1e-9 * hmax) continue;
+      if (q.dist > 0.95 * hmax) {
+        farSkipped++;
+        continue;
+      }
+      target[a * 3] = q.point[0];
+      target[a * 3 + 1] = q.point[1];
+      target[a * 3 + 2] = q.point[2];
+      alpha[a] = 1;
+    }
+    const place = () => {
+      for (let a = 0; a < nNodes; a++)
+        for (let d = 0; d < 3; d++)
+          xyz[a * 3 + d] =
+            (base[a * 3 + d] as number) +
+            (alpha[a] as number) * ((target[a * 3 + d] as number) - (base[a * 3 + d] as number));
+    };
+    const ref = brickVol / 8;
+    const xe = new Float64Array(24);
+    for (let round = 0; round < 24; round++) {
+      place();
+      let bad = 0;
+      for (let e = 0; e < nElem; e++) {
+        gatherXe(e, xe);
+        if (minCornerJacobian(xe, ref) < 0.1) {
+          bad++;
+          for (let a = 0; a < 8; a++) {
+            const nd = conn[e * 8 + a] as number;
+            if ((alpha[nd] as number) > 0)
+              alpha[nd] = (alpha[nd] as number) < 0.1 ? 0 : (alpha[nd] as number) * 0.5;
+          }
+        }
+      }
+      if (bad === 0) break;
+    }
+    place();
+    for (let a = 0; a < nNodes; a++) {
+      const moved = Math.hypot(
+        (xyz[a * 3] as number) - (base[a * 3] as number),
+        (xyz[a * 3 + 1] as number) - (base[a * 3 + 1] as number),
+        (xyz[a * 3 + 2] as number) - (base[a * 3 + 2] as number),
+      );
+      if (moved > 1e-9 * hmax) snappedNodes++;
+      const wanted = Math.hypot(
+        (target[a * 3] as number) - (base[a * 3] as number),
+        (target[a * 3 + 1] as number) - (base[a * 3 + 1] as number),
+        (target[a * 3 + 2] as number) - (base[a * 3 + 2] as number),
+      );
+      if (wanted > 1e-9 * hmax && moved < wanted * 0.999) relaxedNodes++;
+    }
+    if (farSkipped > 0)
+      warnings.push(
+        `${farSkipped} boundary node(s) were more than 0.95 element sizes from the surface (thin or sharp features) and were left in place`,
+      );
+    // element matrices for every element that has a moved node
+    let nd = 0;
+    const flagged: number[] = [];
+    for (let e = 0; e < nElem; e++) {
+      let any = false;
+      for (let a = 0; a < 8 && !any; a++) {
+        const node = (conn[e * 8 + a] as number) * 3;
+        for (let d = 0; d < 3; d++)
+          if (Math.abs((xyz[node + d] as number) - (base[node + d] as number)) > 1e-12) any = true;
+      }
+      if (any) {
+        distIdx[e] = nd++;
+        flagged.push(e);
+      }
+    }
+    distKe = new Float64Array(nd * 576);
+    minJ = Number.POSITIVE_INFINITY;
+    for (const e of flagged) {
+      gatherXe(e, xe);
+      minJ = Math.min(minJ, minCornerJacobian(xe, ref));
+      let hb: ReturnType<typeof buildHex>;
+      try {
+        hb = buildHex(xe, el.D);
+      } catch {
+        throw new Error(
+          'The fitted mesh has an inverted element: use a smaller elementSize or set fit to false',
+        );
+      }
+      distKe.set(hb.Ke, (distIdx[e] as number) * 576);
+      evol[e] = hb.volume;
+    }
+    if (!Number.isFinite(minJ)) minJ = 1;
+    if (minJ < 0.15)
+      warnings.push(
+        `Some fitted elements are strongly distorted (worst corner Jacobian ratio ${Math.round(minJ * 100) / 100}): refine the grid there for reliable stress`,
+      );
+  }
+  // element centres from the final node positions
+  for (let e = 0; e < nElem; e++) {
+    let sx = 0;
+    let sy = 0;
+    let sz = 0;
+    for (let a = 0; a < 8; a++) {
+      const nd2 = (conn[e * 8 + a] as number) * 3;
+      sx += xyz[nd2] as number;
+      sy += xyz[nd2 + 1] as number;
+      sz += xyz[nd2 + 2] as number;
+    }
+    centers[e * 3] = sx / 8;
+    centers[e * 3 + 1] = sy / 8;
+    centers[e * 3 + 2] = sz / 8;
+  }
+  let voxelVolume = 0;
+  for (let e = 0; e < nElem; e++) voxelVolume += evol[e] as number;
 
   // boundary conditions
   const fixed = new Uint8Array(ndof);
@@ -483,32 +673,39 @@ export function solidFea(inp: SolidFeaInput): SolidFeaResult {
   }
   if (inp.gravity) {
     if (!inp.density) throw new Error('gravity needs a density');
-    const w = inp.density * 9.81e-6 * hv[0] * hv[1] * hv[2]; // N per element
-    for (let e = 0; e < nElem; e++)
+    for (let e = 0; e < nElem; e++) {
+      const w = inp.density * 9.81e-6 * (evol[e] as number); // N for this element
       for (let a = 0; a < 8; a++) {
         const node = conn[e * 8 + a] as number;
         f[node * 3 + 2] = (f[node * 3 + 2] as number) - w / 8;
       }
-    applied[2] -= w * nElem;
+      applied[2] -= w;
+    }
   }
   if (!f.some((v) => v !== 0)) throw new Error('No loads: add a load or turn on gravity');
 
-  const el = buildElement(hv, inp.E, nu);
   const Ke = el.Ke;
 
   // operator and Jacobi preconditioner
   const diag = new Float64Array(ndof);
-  for (let e = 0; e < nElem; e++)
+  for (let e = 0; e < nElem; e++) {
+    const di = distIdx[e] as number;
+    const KK = di >= 0 ? distKe : Ke;
+    const oo = di >= 0 ? di * 576 : 0;
     for (let a = 0; a < 8; a++)
       for (let d = 0; d < 3; d++) {
         const dof = (conn[e * 8 + a] as number) * 3 + d;
-        diag[dof] = (diag[dof] as number) + (Ke[(a * 3 + d) * 24 + a * 3 + d] as number);
+        diag[dof] = (diag[dof] as number) + (KK[oo + (a * 3 + d) * 24 + a * 3 + d] as number);
       }
+  }
   const pe = new Float64Array(24);
   const apply = (x: Float64Array, y: Float64Array) => {
     y.fill(0);
     for (let e = 0; e < nElem; e++) {
       const base = e * 8;
+      const di = distIdx[e] as number;
+      const KK = di >= 0 ? distKe : Ke;
+      const oo = di >= 0 ? di * 576 : 0;
       for (let a = 0; a < 8; a++) {
         const node = (conn[base + a] as number) * 3;
         pe[a * 3] = x[node] as number;
@@ -517,8 +714,8 @@ export function solidFea(inp: SolidFeaInput): SolidFeaResult {
       }
       for (let r = 0; r < 24; r++) {
         let v = 0;
-        const row = r * 24;
-        for (let c = 0; c < 24; c++) v += (Ke[row + c] as number) * (pe[c] as number);
+        const row = oo + r * 24;
+        for (let c = 0; c < 24; c++) v += (KK[row + c] as number) * (pe[c] as number);
         const dof = (conn[base + ((r / 3) | 0)] as number) * 3 + (r % 3);
         y[dof] = (y[dof] as number) + v;
       }
@@ -534,7 +731,9 @@ export function solidFea(inp: SolidFeaInput): SolidFeaResult {
   const pv = new Float64Array(ndof);
   const q = new Float64Array(ndof);
   for (let i = 0; i < ndof; i++) r[i] = fixed[i] ? 0 : (f[i] as number);
-  const bnorm = Math.hypot(...r) || 1;
+  let bsum = 0;
+  for (let i = 0; i < ndof; i++) bsum += (r[i] as number) ** 2;
+  const bnorm = Math.sqrt(bsum) || 1;
   const prec = (a: Float64Array, b: Float64Array) => {
     for (let i = 0; i < ndof; i++) b[i] = fixed[i] ? 0 : (a[i] as number) / (diag[i] as number);
   };
@@ -601,6 +800,14 @@ export function solidFea(inp: SolidFeaInput): SolidFeaResult {
   // stress recovery at the 8 Gauss points, averaged per element
   const vm = new Float64Array(nElem);
   const ue = new Float64Array(24);
+  const xeTmp = new Float64Array(24);
+  const sigGp = new Float64Array(48);
+  const nodeSig = new Float64Array(nNodes * 6);
+  const nodeCnt = new Float64Array(nNodes);
+  const gatherInto = (e: number) => {
+    gatherXe(e, xeTmp);
+    return xeTmp;
+  };
   const alpha9 = new Float64Array(9);
   const eps = new Float64Array(6);
   const sig = new Float64Array(6);
@@ -611,15 +818,19 @@ export function solidFea(inp: SolidFeaInput): SolidFeaResult {
       ue[a * 3 + 1] = u[node + 1] as number;
       ue[a * 3 + 2] = u[node + 2] as number;
     }
+    const hbE = (distIdx[e] as number) >= 0 ? buildHex(gatherInto(e), el.D) : undefined;
+    const Rm = hbE ? hbE.R : el.R;
+    const Bm = hbE ? hbE.B : el.B;
+    const Gm = hbE ? hbE.G : el.G;
     for (let i = 0; i < 9; i++) {
       let v = 0;
-      for (let c = 0; c < 24; c++) v += (el.R[i * 24 + c] as number) * (ue[c] as number);
+      for (let c = 0; c < 24; c++) v += (Rm[i * 24 + c] as number) * (ue[c] as number);
       alpha9[i] = v;
     }
     let sum = 0;
     for (let gp = 0; gp < 8; gp++) {
-      const B = el.B[gp] as Float64Array;
-      const G = el.G[gp] as Float64Array;
+      const B = Bm[gp] as Float64Array;
+      const G = Gm[gp] as Float64Array;
       for (let i = 0; i < 6; i++) {
         let v = 0;
         for (let c = 0; c < 24; c++) v += (B[i * 24 + c] as number) * (ue[c] as number);
@@ -631,6 +842,7 @@ export function solidFea(inp: SolidFeaInput): SolidFeaResult {
         for (let c = 0; c < 6; c++) v += (el.D[i * 6 + c] as number) * (eps[c] as number);
         sig[i] = v;
       }
+      sigGp.set(sig, gp * 6);
       const [sx, sy, sz, txy, tyz, txz] = sig as unknown as [
         number,
         number,
@@ -645,17 +857,53 @@ export function solidFea(inp: SolidFeaInput): SolidFeaResult {
       );
     }
     vm[e] = sum / 8;
+    // extrapolate the Gauss-point stresses to the 8 nodes (linear through the points at +-1/sqrt 3) and accumulate
+    for (let a = 0; a < 8; a++) {
+      const sg = SIGNS[a] as [number, number, number];
+      const node = conn[e * 8 + a] as number;
+      for (let gp = 0; gp < 8; gp++) {
+        // Gauss point order: x fastest, then y, then z, each -1/sqrt 3 then +1/sqrt 3
+        const gx = gp & 1 ? 1 : -1;
+        const gy = gp & 2 ? 1 : -1;
+        const gz = gp & 4 ? 1 : -1;
+        const wgt =
+          ((1 + sg[0] * gx * Math.sqrt(3)) / 2) *
+          ((1 + sg[1] * gy * Math.sqrt(3)) / 2) *
+          ((1 + sg[2] * gz * Math.sqrt(3)) / 2);
+        for (let c = 0; c < 6; c++)
+          nodeSig[node * 6 + c] =
+            (nodeSig[node * 6 + c] as number) + wgt * (sigGp[gp * 6 + c] as number);
+      }
+      nodeCnt[node] = (nodeCnt[node] as number) + 1;
+    }
   }
 
   const sorted = Float64Array.from(vm).sort();
   const at = (p: number) => sorted[Math.min(nElem - 1, Math.floor(p * (nElem - 1)))] as number;
   let peakE = 0;
   for (let e = 1; e < nElem; e++) if ((vm[e] as number) > (vm[peakE] as number)) peakE = e;
+  // nodal (extrapolated, averaged) von Mises: reads surface stress without the half-element offset of Gauss points
+  let peakNode = 0;
+  let peakNodal = 0;
+  for (let a = 0; a < nNodes; a++) {
+    const cnt = nodeCnt[a] as number;
+    if (!cnt) continue;
+    const sg = [0, 1, 2, 3, 4, 5].map((c) => (nodeSig[a * 6 + c] as number) / cnt);
+    const [sx, sy, sz, txy, tyz, txz] = sg as [number, number, number, number, number, number];
+    const v = Math.sqrt(
+      0.5 * ((sx - sy) ** 2 + (sy - sz) ** 2 + (sz - sx) ** 2) +
+        3 * (txy ** 2 + tyz ** 2 + txz ** 2),
+    );
+    if (v > peakNodal) {
+      peakNodal = v;
+      peakNode = a;
+    }
+  }
   const nodeData = new Float64Array(nNodes * 6);
   let maxU = 0;
   let maxUAt: V3 = [0, 0, 0];
   for (let a = 0; a < nNodes; a++) {
-    const c = coordOf(a);
+    const c: V3 = [xyz[a * 3] as number, xyz[a * 3 + 1] as number, xyz[a * 3 + 2] as number];
     nodeData.set(
       [c[0], c[1], c[2], u[a * 3] as number, u[a * 3 + 1] as number, u[a * 3 + 2] as number],
       a * 6,
@@ -666,7 +914,8 @@ export function solidFea(inp: SolidFeaInput): SolidFeaResult {
       maxUAt = c;
     }
   }
-  const peak = vm[peakE] as number;
+  const peak = peakNodal;
+  const peakElement = vm[peakE] as number;
   const p99 = at(0.99);
   return {
     elements: nElem,
@@ -674,6 +923,10 @@ export function solidFea(inp: SolidFeaInput): SolidFeaResult {
     dofs: ndof,
     elementSizeMm: Math.round(hmax * 1e4) / 1e4,
     grid: n,
+    fitted: fitOn,
+    snappedNodes,
+    relaxedNodes,
+    minJacobianRatio: minJ,
     volumeRatio: voxelVolume / Math.abs(measureVolume(inp.shape.clone())),
     iterations: it,
     converged,
@@ -682,11 +935,12 @@ export function solidFea(inp: SolidFeaInput): SolidFeaResult {
     maxVonMises: {
       value: peak,
       at: [
-        centers[peakE * 3] as number,
-        centers[peakE * 3 + 1] as number,
-        centers[peakE * 3 + 2] as number,
+        xyz[peakNode * 3] as number,
+        xyz[peakNode * 3 + 1] as number,
+        xyz[peakNode * 3 + 2] as number,
       ],
     },
+    peakElementVonMises: peakElement,
     p99VonMises: p99,
     medianVonMises: at(0.5),
     ...(inp.yield ? { safetyFactorPeak: inp.yield / peak, safetyFactorP99: inp.yield / p99 } : {}),

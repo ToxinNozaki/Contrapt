@@ -362,3 +362,34 @@ test('CAD inertia drives a physical pendulum: mass_properties of a bar feeds dyn
     /below limits.max/,
   );
 });
+
+test('solid_fea reads the stress concentration of a plate with a hole within 5% of the handbook value, and reports the fitted mesh', async () => {
+  await call('new_model', { name: 'holeplate' });
+  await call('add_step', { step: { op: 'box', id: 'p', w: 40, d: 40, h: 4 } });
+  await call('add_step', {
+    step: { op: 'hole', target: 'p', face: { normal: '+Z' }, uv: [0, 0], diameter: 10 },
+  });
+  const F = 10 * 40 * 4;
+  const args = {
+    body: 'p',
+    material: '6061-T6',
+    element_size_mm: 1,
+    supports: [{ region: { face: { normal: '-X' } } }],
+    loads: [{ region: { face: { normal: '+X' } }, force: [F, 0, 0] }],
+  };
+  const fitted = json(await call('solid_fea', args));
+  const kt = 3 - 3.14 * 0.25 + 3.667 * 0.25 ** 2 - 1.527 * 0.25 ** 3; // Peterson, net section
+  const net = F / (30 * 4);
+  assert.ok(
+    Math.abs(fitted.von_mises_MPa.peak / net - kt) < 0.05 * kt,
+    `Kt ${fitted.von_mises_MPa.peak / net}`,
+  );
+  assert.equal(fitted.mesh.fitted, true);
+  assert.ok(fitted.mesh.snapped_nodes > 50);
+  assert.ok(fitted.mesh.min_jacobian_ratio > 0.3);
+  assert.ok(Math.abs(fitted.mesh.volume_ratio - 1) < 5e-3);
+  assert.ok(fitted.von_mises_MPa.peak_element_average <= fitted.von_mises_MPa.peak);
+  const stair = json(await call('solid_fea', { ...args, fit: false }));
+  assert.equal(stair.mesh.fitted, false);
+  assert.equal(stair.mesh.snapped_nodes, 0);
+});

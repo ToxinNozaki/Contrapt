@@ -84,7 +84,7 @@ Status: `[ ]` planned · `[~]` in progress · `[x]` done · `[-]` dropped (say w
 
 ## P5 — Simulation
 - [x] Static FEA: 3D beam elements (frame_analysis; nodal + distributed loads, gravity, reactions, member forces, stress, safety factor), validated vs closed-form cantilever, simply supported, fixed-fixed, torsion, axial, gravity, orientation invariance - 2026-11-19
-- [~] Static FEA for solids: voxel hexahedra with incompatible modes + matrix-free CG (solid_fea), validated vs beam theory and the frame solver; displacements reliable, peak stress approximate at holes/corners - 2026-11-19. Body-fitted tetrahedral mesher (accurate stress at curved boundaries) still pending
+- [x] Static FEA for solids: body-fitted hexahedral mesh (boundary nodes snapped onto the exact surface, distorted Wilson-Taylor elements with Taylor correction, nodal stress recovery) + matrix-free CG (solid_fea). Handbook check: plate-with-hole Kt within 1% at 5 elements per hole radius, 8% at 2.5; round cantilever closer to beam theory than the staircase - 2026-11-22. Still structured: sharp corners and features under ~2 elements are not captured; a true unstructured tetrahedral mesher would remove that
 - [x] Modal analysis for frames (frame_modes, consistent mass, Jacobi eigen-solver), validated vs Euler-Bernoulli cantilever and pinned-pinned frequencies (mode shapes pending) - 2026-11-19
 - [ ] Modal mode shapes, and modal analysis of solids (frame natural frequencies done)
 - [ ] Linear buckling
