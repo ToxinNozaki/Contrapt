@@ -655,3 +655,137 @@ export function frameModes(inp: FrameInput, count = 5): ModalResult {
     ],
   };
 }
+
+// ---- linear buckling -----------------------------------------------------------------------------------------------
+
+export interface BucklingResult {
+  /** load multipliers: the applied loads scaled by each factor would buckle the frame, lowest first */
+  loadFactors: number[];
+  /** member axial forces under the applied loads (N, compression negative) */
+  axialForces: Record<string, number>;
+  /** true when no member is in compression, so there is nothing to buckle */
+  tensionOnly: boolean;
+  notes: string[];
+}
+
+/** Geometric (initial-stress) stiffness of a beam element carrying axial force N (tension positive), local axes. */
+function localGeometric(m: FrameMember, L: number, N: number): Mat {
+  const kg = zeros(12);
+  const set = (i: number, j: number, v: number) => {
+    (kg[i] as number[])[j] = v;
+  };
+  const c = N / (30 * L);
+  const xy = [
+    [36, 3 * L, -36, 3 * L],
+    [3 * L, 4 * L * L, -3 * L, -L * L],
+    [-36, -3 * L, 36, -3 * L],
+    [3 * L, -L * L, -3 * L, 4 * L * L],
+  ];
+  const xz = [
+    [36, -3 * L, -36, -3 * L],
+    [-3 * L, 4 * L * L, 3 * L, -L * L],
+    [-36, 3 * L, 36, 3 * L],
+    [-3 * L, -L * L, 3 * L, 4 * L * L],
+  ];
+  const ixy = [1, 5, 7, 11];
+  const ixz = [2, 4, 8, 10];
+  for (let i = 0; i < 4; i++)
+    for (let j = 0; j < 4; j++) {
+      set(ixy[i] as number, ixy[j] as number, c * ((xy[i] as number[])[j] as number));
+      set(ixz[i] as number, ixz[j] as number, c * ((xz[i] as number[])[j] as number));
+    }
+  // torsional term from the polar radius of gyration
+  const t = (N * (m.Iy + m.Iz)) / (m.A * L);
+  set(3, 3, t);
+  set(3, 9, -t);
+  set(9, 3, -t);
+  set(9, 9, t);
+  return kg;
+}
+
+/**
+ * Linear (Euler) buckling of a frame: solves K phi = lambda (-Kg) phi, where Kg is the geometric stiffness from the
+ * member axial forces of the static solution under the given loads. lambda is the factor on those loads.
+ */
+export function frameBuckling(inp: FrameInput, count = 3): BucklingResult {
+  const st = analyzeFrame(inp);
+  const p = prepare(inp);
+  const axial: Record<string, number> = {};
+  let anyCompression = false;
+  const Kg = zeros(p.ndof);
+  p.elems.forEach((e, i) => {
+    const mf = st.members[i] as MemberForces;
+    // end-1 local force on the member is -N along +x for tension: N (tension positive) = -F1x; use the mid-length value
+    const N = -((mf.end1[0] as number) + (e.q[0] * e.L) / 2); // axial force at mid-length
+    axial[e.m.id] = N;
+    if (N < -1e-9) anyCompression = true;
+    const kgl = localGeometric(e.m, e.L, N);
+    const kgg = mulMM(transpose(e.T), mulMM(kgl, e.T));
+    for (let a = 0; a < 12; a++)
+      for (let b = 0; b < 12; b++)
+        addTo(Kg, e.dofs[a] as number, e.dofs[b] as number, (kgg[a] as number[])[b] as number);
+  });
+  const notes: string[] = [
+    'Linear (Euler) buckling of rigid-jointed beam elements: the load factor multiplies ALL applied loads (and gravity if on). Elastic only, no imperfections, no post-buckling; real columns fail below this when imperfect or inelastic. Use at least 4 elements per member that can buckle.',
+  ];
+  if (!anyCompression)
+    return {
+      loadFactors: [],
+      axialForces: axial,
+      tensionOnly: true,
+      notes: [
+        ...notes,
+        'No member is in compression under these loads, so there is nothing to buckle.',
+      ],
+    };
+
+  const free = p.fixed.map((f, i) => (f ? -1 : i)).filter((i) => i >= 0);
+  if (free.length > MAX_MODAL_DOF)
+    throw new Error(
+      `${free.length} free degrees of freedom is too many for buckling analysis (max ${MAX_MODAL_DOF}): use fewer nodes`,
+    );
+  const K = assembleK(p);
+  const Kf = free.map((i) => free.map((j) => (K[i] as number[])[j] as number));
+  const Gf = free.map((i) => free.map((j) => -((Kg[i] as number[])[j] as number)));
+  let L: Mat;
+  try {
+    L = cholesky(Kf);
+  } catch {
+    throw new Error(
+      'The structure is unstable even before buckling (a mechanism): add supports or members',
+    );
+  }
+  const n = free.length;
+  const Y = zeros(n);
+  for (let c = 0; c < n; c++)
+    for (let i = 0; i < n; i++) {
+      let s = (Gf[i] as number[])[c] as number;
+      for (let k = 0; k < i; k++)
+        s -= ((L[i] as number[])[k] as number) * ((Y[k] as number[])[c] as number);
+      (Y[i] as number[])[c] = s / ((L[i] as number[])[i] as number);
+    }
+  const A = zeros(n);
+  for (let r = 0; r < n; r++)
+    for (let i = 0; i < n; i++) {
+      let s = (Y[r] as number[])[i] as number;
+      for (let k = 0; k < i; k++)
+        s -= ((L[i] as number[])[k] as number) * ((A[r] as number[])[k] as number);
+      (A[r] as number[])[i] = s / ((L[i] as number[])[i] as number);
+    }
+  for (let i = 0; i < n; i++)
+    for (let j = i + 1; j < n; j++) {
+      const v = (((A[i] as number[])[j] as number) + ((A[j] as number[])[i] as number)) / 2;
+      (A[i] as number[])[j] = v;
+      (A[j] as number[])[i] = v;
+    }
+  // eigenvalues mu = 1 / lambda; the smallest positive lambda is the largest positive mu
+  const mu = jacobiEigenvalues(A)
+    .filter((x) => x > 1e-12)
+    .sort((a, b) => b - a);
+  return {
+    loadFactors: mu.slice(0, count).map((x) => 1 / x),
+    axialForces: axial,
+    tensionOnly: false,
+    notes,
+  };
+}

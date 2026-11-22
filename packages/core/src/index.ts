@@ -35,6 +35,7 @@ export { evalExpr, exprNames, type Num } from './expr.ts';
 export { type FaceNormal, type FoundFace, faceToWorld, findFace, uvAxes } from './faces.ts';
 export {
   analyzeFrame,
+  type BucklingResult,
   DOFS,
   type Dof,
   type FrameInput,
@@ -42,6 +43,7 @@ export {
   type FrameNodalLoad,
   type FrameResult,
   type FrameSupport,
+  frameBuckling,
   frameModes,
   type MemberForces,
   type ModalResult,

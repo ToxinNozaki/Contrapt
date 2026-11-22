@@ -168,3 +168,7 @@ so nothing is lost even if a bullet here is missed. Repo-relative paths only (th
 - Result (plate 40x40x4, hole d=10, handbook Kt 2.42): fitted 2.23 / 2.405 / 2.50 at h = 2 / 1 / 0.5; the staircase gave 1.67 / 2.34 / 2.73 (erratic). Element-level tests: symmetric, zero energy for rigid translation and rotation, and the patch test (exact uniform-strain energy) on a badly distorted hexahedron.
 - Bug found by the finer grid: Math.hypot(...r) overflowed the stack at about 50k elements; replaced with a loop.
 - Tool: solid_fea gained fit (default true) and reports fitted, snapped_nodes, relaxed_nodes, min_jacobian_ratio and peak_element_average.
+
+## 2026-11-22 — Frame buckling
+
+- `frameBuckling` in fea.ts: static solve for member axial forces, consistent geometric stiffness (both bending planes plus a torsional term), generalized eigenproblem K phi = lambda (-Kg) phi reduced with a Cholesky factor of K and solved by Jacobi (smallest positive lambda = largest positive 1/lambda). The load factor multiplies all applied loads and gravity. Validated against Euler for the four classic end conditions (0.5%, 8 elements), the 1/L^2 scaling, weak-axis selection, and tension-only structures. MCP tool `frame_buckling` with a margin-of-3 verdict. Solid and plate buckling are not done.

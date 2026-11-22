@@ -393,3 +393,43 @@ test('solid_fea reads the stress concentration of a plate with a hole within 5% 
   assert.equal(stair.mesh.fitted, false);
   assert.equal(stair.mesh.snapped_nodes, 0);
 });
+
+test('frame_buckling: a pinned aluminium strut buckles at the Euler load, and tension-only frames report nothing to buckle', async () => {
+  const L = 200;
+  const n = 8;
+  const ns: Record<string, number[]> = {};
+  const ms = [];
+  for (let i = 0; i <= n; i++) ns[`n${i}`] = [(L * i) / n, 0, 0];
+  for (let i = 0; i < n; i++)
+    ms.push({
+      id: `m${i}`,
+      a: `n${i}`,
+      b: `n${i + 1}`,
+      material: '6061-T6',
+      section: { shape: 'round', d: 8 },
+    });
+  const base = {
+    nodes: ns,
+    members: ms,
+    supports: [
+      { node: 'n0', fix: ['ux', 'uy', 'uz', 'rx'] },
+      { node: 'n8', fix: ['uy', 'uz', 'rx'] },
+    ],
+  };
+  const r = json(
+    await call('frame_buckling', { ...base, loads: [{ node: 'n8', force: [-100, 0, 0] }] }),
+  );
+  const I = (Math.PI * 8 ** 4) / 64;
+  const euler = (Math.PI ** 2 * 69000 * I) / L ** 2;
+  assert.ok(
+    Math.abs(r.load_factors[0] * 100 - euler) < 5e-3 * euler,
+    `${r.load_factors[0] * 100} vs ${euler}`,
+  );
+  assert.ok(Math.abs(r.member_axial_forces_N.m4 + 100) < 1e-3);
+  assert.match(r.verdict, /lowest buckling load factor/);
+  const t = json(
+    await call('frame_buckling', { ...base, loads: [{ node: 'n8', force: [100, 0, 0] }] }),
+  );
+  assert.match(t.verdict, /nothing to buckle/);
+  assert.deepEqual(t.load_factors, []);
+});

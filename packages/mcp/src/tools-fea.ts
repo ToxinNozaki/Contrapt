@@ -5,6 +5,7 @@ import {
   DOFS,
   type FrameInput,
   type FrameMember,
+  frameBuckling,
   frameModes,
   getMaterial,
   MATERIAL_NAMES,
@@ -368,6 +369,43 @@ export const feaTools: ToolDef[] = [
           ? { total_mass_g: round(r.totalMassTonne * 1e6, 3) }
           : {}),
         notes: [...r.notes, NOTE],
+      });
+    },
+  },
+  {
+    name: 'frame_buckling',
+    description:
+      'Linear (Euler) buckling of the same kind of frame model: the load factors (multipliers on ALL the applied loads, and gravity if on) at which the frame buckles, lowest first, plus every member axial force under the given loads. Factor 1.0 means the loads you applied are exactly the buckling load; apply a design margin of at least 3 (imperfections and inelastic effects only lower it). Put at least 4 nodes (elements) along every member that can buckle. Tension-only frames report nothing to buckle. Elastic only, no imperfections or post-buckling.',
+    input: {
+      ...FrameArgs,
+      count: z
+        .number()
+        .int()
+        .min(1)
+        .max(10)
+        .optional()
+        .describe('how many buckling modes, default 3'),
+    },
+    readOnly: true,
+    run: async (a, ctx) => {
+      const r = frameBuckling(
+        toFrame(ctx, a as Record<string, unknown>),
+        (a.count as number | undefined) ?? 3,
+      );
+      const first = r.loadFactors[0];
+      return j({
+        verdict: r.tensionOnly
+          ? 'no member is in compression: nothing to buckle'
+          : first === undefined
+            ? 'no buckling mode found'
+            : first >= 3
+              ? `lowest buckling load factor ${round(first, 3)}: at least 3, an acceptable margin for a perfect elastic estimate`
+              : `lowest buckling load factor ${round(first, 3)}: BELOW 3. The applied loads are within ${round(first, 2)}x of buckling${first < 1 ? ' (it buckles under the loads as given)' : ''}`,
+        load_factors: r.loadFactors.map((x) => round(x, 4)),
+        member_axial_forces_N: Object.fromEntries(
+          Object.entries(r.axialForces).map(([k, v]) => [k, round(v, 3)]),
+        ),
+        notes: r.notes,
       });
     },
   },
