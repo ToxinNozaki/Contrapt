@@ -123,8 +123,8 @@ sheet metal, molding, mechanisms, motors, thermal, structures, robotics, safety,
 - "Use the `design_part` playbook: a bracket that holds a 3 kg shelf, 3D printed in PETG."
 - "Use the `design_review` playbook on the current model."
 
-Other playbooks: `design_for_process`, `strength_check`, `size_mechanism`, `brainstorm_invention`, `explain_design`,
-`build_pack`. Apps without prompt menus can use the `get_playbook` tool; `list_knowledge` / `get_knowledge` read any topic.
+Other playbooks: `proof_loop` (requirements, checks, optimise, Build Pack), `design_for_process`, `strength_check`, `size_mechanism`,
+`brainstorm_invention`, `recreate_from_reference`, `explain_design`, `build_pack`. Apps without prompt menus can use the `get_playbook` tool; `list_knowledge` / `get_knowledge` read any topic.
 
 ## 4c. Bring in a file from another CAD program
 
@@ -159,14 +159,24 @@ geometry converts and imports exactly; sketches, features and history are not tr
 
 | Tool | What it does |
 |---|---|
-| `get_docs` | Conventions (axes, planes, units), step types, selectors, workflow, examples |
+| `get_docs` | Conventions (axes, planes, units), every step type, selectors, workflow, examples |
 | `new_model`, `set_param` | Start fresh; create or change a named parameter or expression |
-| `add_step` | Add one step: box, cylinder, sphere, sketch, extrude, fillet, chamfer, shell, boolean, transform |
+| `add_step` | Add one step: box, cylinder, sphere, sketch, constrained_sketch, extrude, revolve, loft, sweep, fillet, chamfer, shell, boolean, transform, hole, pattern, mirror, mate, material, import |
 | `run_script` | Build the whole model from one short script (compiles to the same steps) |
 | `suppress_step`, `remove_step` | Edit the timeline |
-| `get_model`, `measure` | Full timeline and build report; volume, area, centre of mass, bounding box |
+| `get_model`, `measure` | Full timeline and build report; volume, area, centre of mass, mass, bounding box |
+| `mass_properties` | Centre of mass, full inertia tensor, principal moments, inertia about any axis |
+| `check_interference`, `check_assembly`, `bom`, `motion_check` | Overlap/gap between two bodies; all pairs; bill of materials with mass; sweep a body and find the first collision |
+| `section_properties`, `beam_check`, `column_check` | Cross-section properties and hand-calculation beam and column checks |
+| `frame_analysis`, `frame_modes`, `frame_buckling` | 3D beam-element FEA: stress and deflection, natural frequencies, Euler buckling load factors |
+| `solid_fea` | Stress and displacement of a solid body on a fitted hexahedral grid |
+| `mechanism_sweep`, `fourbar_check`, `dynamics_sim` | Planar linkage kinematics, four-bar Grashof analysis, 1-DOF dynamics in SI units |
+| `print_check` | FDM overhangs, support estimate, best print orientation, thin walls, build-volume fit |
+| `drawing` | SVG drawing sheet: three views, hidden lines, overall dimensions, title block |
+| `add_spec`, `remove_spec`, `check_specs`, `optimize_param` | The Proof Loop: requirements, verdict, one-parameter optimisation |
+| `journal_add`, `get_journal`, `build_pack` | Design Journal and the Build Pack (README with verdict, STEP and STL per part) |
 | `export_model` | STEP (exact CAD) or STL (3D printing) into the output folder |
-| `save_model`, `load_model`, `list_models` | Keep work between sessions |
+| `save_model`, `load_model`, `list_models` | Keep work between sessions (specs and journal are saved with the model) |
 | `view` | The live viewer link |
 | `render_view` | Render the model to images (iso, top, front, ...) so the AI can see its own work |
 | `convert_file` | (optional) convert a native CAD file to STEP with a converter you enabled |
